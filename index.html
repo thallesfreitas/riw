@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <title>RIW 2025 — Programação (CSV embutido, clean + filtros)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #0b0e15;
+            --ink: #eaf1f9;
+            --muted: #9fb0c3;
+            --line: #1b2640;
+            --radius: 12px;
+            --chip: #121a2a;
+            --chip-b: #26324a;
+            --chip-on: #06223f;
+            --chip-grad1: #8ad8ff;
+            --chip-grad2: #6aa7ff;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            color: var(--ink);
+            background: radial-gradient(900px 600px at 10% -10%, #0d1322 0, #0b0e15 60%);
+            line-height: 1.55
+        }
+
+        .wrap {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px
+        }
+
+        header {
+            margin-bottom: 16px
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: clamp(24px, 4vw, 40px);
+            font-weight: 800;
+            letter-spacing: .2px;
+            background: linear-gradient(90deg, #93c5fd, #60a5fa 60%, #22d3ee);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent
+        }
+
+        .note {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .toolbar {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .search {
+            flex: 1 1 320px;
+            min-width: 240px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--chip);
+            border: 1px solid var(--chip-b);
+            border-radius: 999px;
+            padding: 10px 12px
+        }
+
+        .search input {
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--ink);
+            width: 100%
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .chip-btn {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--chip);
+            border: 1px solid var(--chip-b);
+            color: var(--ink);
+            font-size: 12px;
+            cursor: pointer
+        }
+
+        .chip-btn.active {
+            color: var(--chip-on);
+            background: linear-gradient(180deg, var(--chip-grad1), var(--chip-grad2));
+            border-color: transparent;
+            font-weight: 700
+        }
+
+        .day {
+            margin-top: 22px;
+            border-top: 1px solid var(--line);
+            padding-top: 14px
+        }
+
+        .day h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #8ad8ff
+        }
+
+        .list {
+            display: grid;
+            gap: 10px
+        }
+
+        .item {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-left-width: 6px;
+            border-radius: var(--radius);
+            background: #0f1523
+        }
+
+        .time {
+            align-self: start;
+            white-space: nowrap;
+            color: #06223f;
+            background: #8ad8ff;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 700
+        }
+
+        .title {
+            margin: 0;
+            font-size: 16px
+        }
+
+        .meta {
+            margin-top: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 12px
+        }
+
+        .meta .chip {
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .08);
+            background: rgba(255, 255, 255, .03)
+        }
+
+        .desc {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .hidden {
+            display: none !important
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <h1>Rio Innovation Week 2025 — Programação</h1>
+            <p class="note">Lista clean, cores suaves por Palco, com busca e filtros.</p>
+            <div class="toolbar">
+                <div class="search">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 21l-4.2-4.2m1.4-4.8a7 7 0 11-14 0 7 7 0 0114 0z" stroke="#9fb0c3"
+                            stroke-width="1.6" stroke-linecap="round" />
+                    </svg>
+                    <input id="q" placeholder="Buscar título, palestrantes, palco, local..." />
+                </div>
+                <div class="filters" id="filters"></div>
+            </div>
+        </header>
+        <main id="agenda"></main>
+    </div>
+
+    <!-- Cole aqui TODO o CSV (incluindo a primeira linha de cabeçalho) -->
+    <script id="csv" type="text/csv">Data,Horário,Título,Palco,Local,Palestrantes,Descrição
+    12/08,11:00 - 11:15,Recomunique-se: porque uma comunicação commodity não vende nada pra ninguém,RIW Talks,Kobra 1º Piso - Palco 27,Carlos Gil; Sebastian Vettel,"O tetracampeão mundial de Fórmula 1, Sebastian Vettel, estará no Rio Innovation Week para um bate-papo exclusivo que vai muito além das pistas."
+    12/08,11:00 - 11:45,Rio do Amanhã - Capital Brasileira da Inteligência Artificial,Inteligência Artificial,Kobra 1º Piso - Palco 26,Camila Farani; Felipe Titto,"No painel “Da Influência ao Equity: a estratégia por trás do ecossistema de Felipe Titto”, os holofotes estarão voltados para as engrenagens que movem um dos empreendedores mais multifacetados da nova geração."
+    12/08,11:00 - 11:45,Governança Digital e Dados Abertos,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Pedro Sobral,"Tráfego não é sobre botão, é sobre base."
+    12/08,11:00 - 11:45,Do Problema à Solução: Como Grandes Empresas Estão Inovando com Startups em Tempo Real,Open Innovation,Armazém 5 - Palco 19,Graça Machel; Dr. Denis Mukwege; Aline Midlej,Duas das vozes mais inspiradoras do nosso tempo se encontram para uma conversa rara e profundamente humana.
+    12/08,11:00 - 11:45,Cederj 25 anos: conectando pessoas ao ensino superior público e de qualidade,RIW Future,Kobra 1º Piso - Palco 29,Ben Hur Correia; Peter Diamandis,O que você faria se soubesse que os próximos dez anos trarão mais mudanças do que os últimos cem.
+    12/08,11:00 - 11:45,"Inovação financeira: como consolidar liderança global do Brasil na nova economia, do blockchain ao Drex - e como as fintechs estão colaborando para essa evolução",Open Innovation B,Armazém 5 - Palco 19,Martha Medeiros; Paula Taitelbaum,"Martha Medeiros, uma das mais admiradas escritoras brasileiras, é reconhecida por sua sensibilidade e pela proximidade que estabelece com seus leitores."
+    12/08,11:00 - 11:45,"Abertura: Infraestrutura de Inovação - Governo, ICTs e Deep Techs no Brasil Profundo da Ciência",Deep Tech Lab,Armazém 5 - Palco 21,Fred Bruno,-.
+    12/08,11:00 - 11:45,Bootcamp Captação de Investimento para Startups,Arca Hub,Armazém 5 - Arca Hub,Camila Salek,"Focada em como o varejo pode ir além da simples transação e se tornar um palco para experiências memoráveis, esta palestra convida marcas a repensarem seus espaços físicos como ferramentas estratégicas de engajamento."
+    12/08,11:00 - 11:45,Encontro de Economia Criativa,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Rebeca Andrade; Getúlio Vargas; Sérgio Ricardo,-.
+    12/08,11:00 - 11:30,O Cérebro Digital do Mundo: O Futuro dos Data Centers Autônomos,RIW Revolution,Kobra 2º Piso - Palco 40,Vanessa Cavalieri; Renan Ferreirinha; Juliana Pio; Daniel Becker,"Em um mundo onde o acesso à tecnologia começa cada vez mais cedo, pais, educadores e especialistas se deparam com uma pergunta urgente: como equilibrar o uso das redes sociais com o desenvolvimento saudável das crianças."
+    12/08,11:30 - 12:15,Varejo Experiencial,RIW Talks,Kobra 1º Piso - Palco 27,Mari Krüger; Lara Machado; Nunca vi 1 Cientista,"A palestra reúne as cientistas Ana Bonassa e Laura Marise, do canal Nunca Vi 1 Cientista, e a divulgadora e atriz, Mari Krüger para discutir os desafios e oportunidades de comunicar ciência nas plataformas digitais."
+    12/08,11:45 - 12:15,GenGen – Generative Generation,RIW Revolution,Kobra 2º Piso - Palco 40,Vinícius Farah; Pedro Doria; Camila Farani,O futuro das cidades depende de decisões ousadas no presente.
+    12/08,12:00 - 12:45,"O Futuro já Começou: Segurança Digital, um compromisso coletivo",Inteligência Artificial,Kobra 1º Piso - Palco 26,Débora Marquesi,"Como criar experiências que conectam pessoas, marcas e espaços de forma significativa."
+    12/08,12:00 - 12:45,"Além da Segurança: Usos Avançados de Reconhecimento Facial para Mapeamento de Fluxos, Insights de Marketing e Experiências Educacionais",Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Monica Magalhães,"Em uma era de mudanças aceleradas, dominar o pensamento de futuro pode te destacar como o agente de transformação que sua empresa ou seus clientes precisam."
+    12/08,12:00 - 12:30,Produtos que viram hábitos - o sonho de qualquer startup (ou corporação),Open Innovation,Armazém 5 - Palco 19,Raquel Virgínia,"No dia 14 de agosto, Raquel Virginia conduzirá uma masterclass exclusiva sobre os impactos estratégicos da diversidade no ambiente de negócios."
+    12/08,12:00 - 12:30,"Economia Regenerativa: A Nova Fronteira da Inovação Sustentável - Produtos, negócios e tecnologias que nascem dos resíduos.",RIW Future,Kobra 1º Piso - Palco 29,Geórgia Lima,"Em um mundo hiperconectado, quem se comunica com clareza e presença tem vantagem."
+    12/08,12:00 - 12:45,Inovação Aberta e Empreendedorismo Público,Open Innovation B,Armazém 5 - Palco 19,Luiz Ribeiro,"Em um mundo hiperconectado, onde atenção virou moeda e confiança é o novo ROI, influência não é mais sobre alcance – é sobre impacto."
+    12/08,12:00 - 12:45,Hackeando a Economia Criativa,Arca Hub,Armazém 5 - Arca Hub,Willington Feitosa; Marcio Lacs; Alberto Bastos; Robert Franz Janssen,"Ao disponibilizar dados públicos de forma acessível, a prefeitura permite que cidadãos, empresas e pesquisadores desenvolvam novas soluções para problemas urbanos, desde aplicativos de transporte até análises sobre saúde e segurança."
+    12/08,12:00 - 12:45,Profissionais de Audio Visual,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Hildon Luiz Carrapito Gomes; Paulo Manoel Lenz Cesar Protasio,Autoridades das Secretarias de Meio Ambiente das Cidades convidadas.
+    12/08,12:15 - 13:15,Como saber se a sua startup é atrativo para investidores de VC?,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Rodrigo Belchior; Silvana Rocco; Giulia; Grazi Domingues,"Num mundo em constante transformação, onde inovação e humanização precisam caminhar lado a lado, a cultura se mostra uma poderosa aliada na promoção da saúde mental e da inclusão."
+    12/08,12:30 - 13:15,Uma conversa com a maior medalhista do Brasil nos Jogos Olímpicos,RIW Talks,Kobra 1º Piso - Palco 27,Paulo Moll; João Pantoja; Romeu Cortes Domingues; Charles Souleyman Al Odeh,A história de sucesso de empreendedores de saúde no Rio de Janeiro.
+    12/08,12:45 - 13:30,"Ciência, Tecnologia e Inovação no apoio a negócios de impacto social em comunidades - Contemplados no Favela Inteligente",RIW Future,Kobra 1º Piso - Palco 29,Bruno Caselli; Mariana Rodrigues França; Fernando Moura,"A abertura do TIP-ANP na Rio Innovation Week marca o início de uma jornada de debates, conexões e descobertas sobre o futuro da energia no Brasil."
+    12/08,12:45 - 13:30,Laboratórios Compartilhados e Conectados: Acelerando a Ciência para Soluções,Deep Tech Lab,Armazém 5 - Palco 21,Walta Paula Roberta Faria Carvajal; Maína Celidonio; Danielle Silva Bernardes,Explorando as tecnologias emergentes e soluções inovadoras para o transporte coletivo urbano sustentável.
+    12/08,13:00 - 13:45,"O futuro humano na Era da Inteligência Artificial - – a saúde, o trabalho e as relações na sociedade hiperconectada",Inteligência Artificial,Kobra 1º Piso - Palco 26,,A construção de um mundo mais inclusivo e sustentável: o empoderamento da próxima geração de líderes locais para impulsionar agendas globais.
+    12/08,13:00 - 13:45,"Ela Inova, Ela Lidera: Mulheres à Frente da Nova Economia""",Open Innovation,Armazém 5 - Palco 19,,"Como o Corporate Venture Capital (CVC) pode ser uma poderosa ferramenta para impulsionar a inovação, a eficiência e competitividade no mercado."
+    12/08,13:00 - 13:45,Inteligência Artificial na Prática: Como Startups Estão Usando IA para Crescer Rápido,Open Innovation B,Armazém 5 - Palco 19,Daniel Zanco,A digitalização acelerou mudanças profundas no comportamento de consumo.
+    12/08,13:00 - 13:45,A Revolução da IA no Audiovisual,Arca Hub,Armazém 5 - Arca Hub,Raphael Neves Moura; Ana Casaca,"Em um setor altamente regulado como o de energia, a inovação não acontece à margem da regulação — ela depende dela."
+    12/08,13:00 - 13:45,Designers Connection,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Carolina Ignarra,"A pesquisa Radar da Inclusão, realizada pela Talento Incluir em parceria com o Pacto Global da ONU, Instituto Locomotiva e Diversidade, revela dados preocupantes: 63% das pessoas com deficiência contratadas nunca foram promovidas, 9 em cada 10 sofrem capacitismo no trabalho e 84% têm a saúde emocional afetada por isso."
+    12/08,13:15 - 13:45,Como Atrair Investimentos para Cidades Inteligentes,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Nayra Del Duca,"""Brasil vs Empresários"" é uma palestra apresentada por Nayra Del Duca e Ricardo Nunes que expõe, de forma direta e estratégica, os principais desafios enfrentados por quem empreende no país."
+    12/08,13:30 - 13:45,Data Center como Infraestrutura Nacional Crítica: Desafios e Oportunidades,RIW Revolution,Kobra 2º Piso - Palco 40,Lissa Hamada,"O painel compartilha soluções práticas com as novas ferramentas da The Fabricant, mostrando como a tecnologia potencializa processos criativos na moda digital e tradicional."
+    12/08,13:45 - 14:15,Além do Cheque: O Papel Estratégico dos Investidores em Deep Techs,Deep Tech Lab,Armazém 5 - Palco 21,Leo Feijó,A palestra abordará o desenvolvimento do Plano Estratégico para que o Estado do Rio fortaleça sua posição como Pólo de Inovação na Indústria da Música.
+    12/08,14:00 - 15:00,"Narrativas Espaciais: design, tecnologia e experiência em projetos imersivos",Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Luana Couto,"Negócios que visem a agenda 2030 precisam de mais do que narrativa, mas de ação responsável desde a cadeia de fornecedores até os projetos desenhados como narrativa, responsabilidade nos produtos e serviços e nas políticas com funcionários."
+    12/08,14:00 - 14:45,Transformação do marketing com a chegada dos Agentes de IA no contexto da evolução dos chatbots,Inteligência Artificial,Kobra 1º Piso - Palco 26,Luciana Rodriguez; Rafael Coimbra; Giselle Santos; Alexandre Roldao,A inteligência artificial já transforma a forma como enfrentamos desafios ambientais.
+    12/08,14:00 - 14:30,Habitação e Construção Inteligente,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,,Encontro de networking incentivado entre profissionais e entusiastas de audio visual.
+    12/08,14:00 - 14:45,Sustentabilidade 5.0: Como a tecnologia está redefinindo o futuro verde,Open Innovation,Armazém 5 - Palco 19,Vicente Loureiro; Simone Abrantes Saraiva; Leandro Lemgruber Kropf; Liszt Palmeira; Heloísa Landim Gomes,O objetivo da mesa será debater soluções urbanísticas e de mobilidade para cidades mais inclusivas e acessíveis ao envelhecimento com autonomia.
+    12/08,14:00 - 14:45,Deeptechs na Prática: Como Tecnologias de Fronteira Estão Redefinindo Setores Tradicionais,Open Innovation B,Armazém 5 - Palco 19,Paulo Niemeyer Filho,Livro - No Labirinto do Cérebro.
+    12/08,14:00 - 14:45,Financiamento para Startups,Arca Hub,Armazém 5 - Arca Hub,Daniel Pimentel; Carlos de Oliveira Júnior; Monica Santana Vianna,"O evento “Laboratórios Compartilhados e Conectados: Acelerando a Ciência para Soluções” explora como a colaboração entre laboratórios, pesquisadores e tecnologias emergentes pode acelerar o desenvolvimento de soluções inovadoras."
+    12/08,14:00 - 14:45,Mulheres empreendedoras,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Guilherme Martins; Ivan Padilla Albareda; Flavia Molina,"A Geração Z já representa uma força transformadora no mercado — não só pelo poder de consumo, mas pela forma como redefine prazer, propósito e prioridades."
+    12/08,14:00 - 14:15,Estudo sobre o potencial e as alavancas para o Rio como capital de IA e Datacenters – BIP Consulting,RIW Revolution,Kobra 2º Piso - Palco 40,Maria Cristina (Kika) Ricciardi; Monique Lima; Renata Mello Feltrin; Erica Fridman Stul,"O investimento anjo é mais do que capital, é visão, rede e confiança colocadas a serviço da inovação."
+    12/08,14:30 - 15:00,Energia Circular Inteligente: A Plataforma BIOCODE para Bioinsumos e Biometano,Deep Tech Lab,Armazém 5 - Palco 21,Lucimar Dantas; Claudio Tinoco; Cleber Neves; Tatiana Melamed,A longevidade deixou de ser tendência futura e se tornou realidade presente.
+    12/08,14:30 - 14:45,Maravalley: O Hub de tecnologia e inovação que está construindo o futuro do Rio,RIW Revolution,Kobra 2º Piso - Palco 40,Jaqueline de Carvalho Bento,"Muito além do cumprimento da legislação, a gestão inteligente de resíduos pode ser uma poderosa aliada na construção de marcas sustentáveis, inovadoras e lucrativas."
+    12/08,14:45 - 15:15,O Papel da Internet das Coisas nas Cidades do Futuro,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Rod Cauhi,"Uma imersão na interseção entre pensamento cinematográfico, narrativa e inteligência artificial."
+    12/08,15:00 - 15:45,IA + Dados: Como Transformar Inteligência em Ação Criativa,Inteligência Artificial,Kobra 1º Piso - Palco 26,Thiago Becker; João Paulo Iolle; Valéria Gonçalves Carazzai; Sérgio Rodrigo Pereira de Araújo,Desafios e Oportunidades da Digitalização (dos sistemas) no setor de Energia (Painel Imagem).
+    12/08,15:00 - 15:45,"Portugal 2030: o programa que muitos já ouviram falar, mas poucos realmente conhecem.",Open Innovation,Armazém 5 - Palco 19,Dafna Blaschkauer,Livro - Power Skill.
+    12/08,15:00 - 15:45,"Elas Fundam, Elas Escalam: Mulheres que Estão Redefinindo o Jogo das Startups",Open Innovation B,Armazém 5 - Palco 19,João Farias; Diego Julidori,Os dados são o novo petróleo.
+    12/08,15:00 - 15:45,"Vibe Pitch – Apresente sua ideia, startup ou negócio de um jeito simples e sem pressão.",Arca Hub,Armazém 5 - Arca Hub,Carlos Krykhtine; Mariana Bressan; André Luís dos Santos Chaves,"Imagine morar em uma casa que respira, economiza seus recursos e se integra perfeitamente ao ritmo da cidade."
+    12/08,15:00 - 15:45,Empreendedorismo de Impacto Social (networking),Arca Hub - MeetUp,Armazém 5 - Arca Hub,Tiago Veras; Airton Bodstein de Barros; Irlaine Alvarenga; Gil Correia Kempers Vieira,RJ Resiliente: O Desenvolvimento Científico e Legal da Defesa Civil para atuação em Evento Extremos.
+    12/08,15:00 - 15:15,UniFi: Construindo o Futuro da TI,RIW Revolution,Kobra 2º Piso - Palco 40,Celso Rayol; Neto Tavares; Natasha Bernardo; Cinthia Monnerat; Luca Benites,"A casa brasileira está em transformação — e se torna, mais do que nunca, reflexo de valores afetivos, culturais e sustentáveis."
+    12/08,15:15 - 15:45,"Cientistas para o Século XXI: Formação Acadêmica, Mentalidade Empreendedora e o Caminho da Inovação",Deep Tech Lab,Armazém 5 - Palco 21,V Alte  Marco Antônio Linhares Soares,"O Projeto LEPLAC busca definir os limites da plataforma continental brasileira além das 200 milhas náuticas, fortalecendo a soberania do país sobre áreas estratégicas do oceano."
+    12/08,15:30 - 16:00,A Revolução das Cidades Inteligentes no Brasil,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Claudia Antunes Secin; Maína Celidonio; Luiz Eduardo Oliveira da Silva,Apresentar e debater como a tecnologia e a inovação estão transformando a mobilidade urbana no Rio.
+    12/08,15:30 - 16:00,Robôs de Limpeza em Ambientes Críticos: Automação Inteligente para Data Centers 24/7,RIW Revolution,Kobra 2º Piso - Palco 40,Camila Salek,O caminho até a decisão de compra já não segue uma linha reta — e o varejo precisa acompanhar essa nova lógica.
+    12/08,15:45 - 16:45,The Business of Influence: como marcas constroem relevância no novo jogo da atenção,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Leandro Rocha da Cruz; Adriana Schneider,Do silêncio interior à transformação coletiva.
+    12/08,16:00 - 16:45,"Computação Quântica, um divisor de águas para a humanidade",Inteligência Artificial,Kobra 1º Piso - Palco 26,Jandaraci Araújo,Livro - Mulheres no Conselho e Mulheres na Liderança.
+    12/08,16:00 - 16:45,Inovação com propósito e capital: uma jornada estratégica,Open Innovation,Armazém 5 - Palco 19,Carlos Molina; Luciana Lopes Castro e Silva Fernandez; Daniel Fuks,Educação financeira é o adubo da longevidade próspera.
+    12/08,16:00 - 16:45,Inovação com Tecnologias Emergentes com Blockchain e IA,Open Innovation B,Armazém 5 - Palco 19,Pedro Mattos; Fernando Andreazi,"Em um mercado saturado de mensagens genéricas, criar uma marca relevante vai muito além de um logo bonito ou um slogan de impacto."
+    12/08,16:00 - 16:45,"Confiança para Inovar: Validação, Metrologia e Conectividade como Infraestrutura para Deep Techs",Deep Tech Lab,Armazém 5 - Palco 21,Cristiane Cross; Rayne Ferretti Moraes; Bernardo Chim Rossi; Ana Asti,RJ Resiliente: uma nova visão para Redução de Riscos de Desastres e Adaptação Climática.
+    12/08,16:00 - 16:45,"Vibe Pitch – Apresente sua ideia, startup ou negócio de um jeito simples e sem pressão",Arca Hub,Armazém 5 - Arca Hub,Erika Abreu de Souza Paixão; Julia Queiroz Primo; Pietro Prado de Moura,Vantagens e desvantagens de se ter um seguro de saúde em vez de um plano de saúde.
+    12/08,16:00 - 16:45,Encontro de Marketing Digital & Conteúdo,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Samara Checon; Lais Melo; Vinicius Tortoza; Karina Cruz,"Mais do que falar para seus públicos, marcas e criadores estão aprendendo a construir conexões com eles."
+    12/08,16:15 - 16:45,O Papel da Arte na Construção das Cidades Inteligentes,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Aline Pellegrino; Nathalia Gomes,"Com a busca de cada vez mais visibilidade, patrocínios e apoio institucional, o futebol feminino vive um momento de ascensão."
+    12/08,16:15 - 16:30,RIO AI City: O projeto que vai colocar o rio de Janeiro como epicentro de IA e Datacenters,RIW Revolution,Kobra 2º Piso - Palco 40,Hugo Aguiar; Liliana Pinelli; Eduardo Mac Laren,A transição energética deixou de ser promessa para se tornar urgência.
+    12/08,16:45 - 17:15,IA Generativa no Centro de Tudo: Como a Infraestrutura Vai Aguentar?,RIW Revolution,Kobra 2º Piso - Palco 40,Ricardo Meira,"Como a inteligência aplicada à gestão pública pode fomentar ambientes mais inovadores, inclusivos e eficientes."
+    12/08,17:00 - 17:45,Conectar para Pertencer: Comunicação Genuína e Comunidade em Tempos de Desconexão,RIW Talks,Kobra 1º Piso - Palco 27,Rafael Ferrari Aldemir; Rafael Lychowski; Daniel Skaba; Diogo Lino Machado,"IA e IoT para Eficiência Energética: Otimização de consumo, manutenção preditiva, operação e redes inteligentes (PAINEL DELOITTE)."
+    12/08,17:00 - 17:45,PwC na era da Inteligência,Inteligência Artificial,Kobra 1º Piso - Palco 26,,Rinocerontes na Sala: Quando o Maior Risco é Não Fazer Nada.
+    12/08,17:00 - 17:45,Do Monitoramento Convencional à Inteligência Urbana: Uma Nova Perspectiva com AcuSeek e AIOP,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Roberto Viruel Marcelino; Augusto Archer; Samuel Thomaz; Selma Carvalho,Este painel traz para o centro do palco os pioneiros e os projetos que estão adaptando a tecnologia para resolver os desafios únicos do nosso país.
+    12/08,17:00 - 17:45,"Economia aberta, valor compartilhado: Conectando ecossistemas e impulsionando a relevância",Open Innovation,Armazém 5 - Palco 19,Bruno Lima Pessoa; Mariana Mafra Junqueira,O impacto do uso da neuromodulação nos tratamentos para quem tem dor e Parkinson.
+    12/08,17:00 - 17:45,Sessão de Pitch,Deep Tech Lab,Armazém 5 - Palco 21,Marcelo Sales,"O comércio eletrônico no Brasil cresce ano após ano, mas mesmo com um faturamento maior que 220 bilhões de reais e crescimento de 10,5% em 2024 se comparado com o ano anterior, ainda há uma parcela considerável de pessoas que não conseguem efetuar compras básicas em diferentes lojas online."
+    12/08,17:00 - 17:45,Branding + IA: Como se destacar no caos digital com a Mya,Arca Hub,Armazém 5 - Arca Hub,Paulo Alexandre Marques Santos,"Mais do que um gênero, o funk é uma linguagem popular que acompanha e expressa as transformações sociais do Brasil."
+    12/08,17:00 - 17:45,Encontro de CMOs + Martech Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Édison Renato Pereira da Silva; Leonardo Cordeiro; Raquel Caratti Piani; Yago Paulino Vasconcelos Falcão; Mozart Medeiros,"Em ecossistemas de inovação cada vez mais colaborativos, uma governança robusta de Propriedade Intelectual (PI) é decisiva para transformar ideias em vantagem competitiva sustentável."
+    12/08,17:30 - 18:30,Masterclass - Futurismo e Estratégia: Como Desenhar Cenários para Navegar a Incerteza,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Melissa Fernandez; Lara Menezes; Luiz Miranda; Giovane Rosa; Eduardo da Silva Torres,Quer saber como a força das universidades pode se conectar diretamente com os desafios reais da indústria.
+    12/08,17:30 - 18:15,"Empreendedorismo, desenvolvimento econômico e o olhar do fomento",RIW Future,Kobra 1º Piso - Palco 29,Juliana Poncioni Mota; Antonio Carlos Monteiro Miranda; Roched Jacobson Seba; Úrsula Abiahy,"A crise climática vai muito além do aumento das temperaturas — ela é também uma crise de biodiversidade, justiça socioambiental e sobrevivência dos oceanos."
+    12/08,17:30 - 18:30,Escalabilidade Inteligente: A Nova Arquitetura dos Data Centers,RIW Revolution,Kobra 2º Piso - Palco 40,Patricia Wieland,Este tema explora as aplicações da tecnologia nuclear no aprimoramento da segurança alimentar e no desenvolvimento de novos materiais.
+    12/08,18:00 - 18:30,"Regulação Inteligente: IA, Democracia e Responsabilidade",Inteligência Artificial,Kobra 1º Piso - Palco 26,Rafael Alencar Queiroz,EnsinaBook.
+    12/08,18:00 - 18:45,Inteligência Artificial e o Futuro da Gestão Urbana,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Mario Gioto; Liria Knutti,O que você entende como TEDx.
+    12/08,18:00 - 18:45,Live Shop e Live Commerce: como as vendas AO VIVO estão transformando o varejo online,Open Innovation,Armazém 5 - Palco 19,Alexandre Teixeira; Alfredo Renault; Otto Hebeda; Mariana Rodrigues França,"Explorar como os investimentos em pesquisa e desenvolvimento hoje — especialmente por empresas de O&G — estão pavimentando o caminho para soluções energéticas sustentáveis, escaláveis e economicamente viáveis no longo prazo."
+    12/08,18:00 - 18:15,"INOVAÇÃO CARIOCA: um bate-papo sobre o ecossistema de inovação do Rio de Janeiro, vantagens e desvantagens e a vocação da cidade para o empreendedorismo e novos negócios.",Open Innovation B,Armazém 5 - Palco 19,Everton Pereira da Silva; Adriano Hazad; Thaynara Fernandes; Abigail de Souza Rodrigues; Juliana Baptista,
+    12/08,18:00 - 18:30,"O que faz um investidor dizer sim: liderança, visão e estratégia",Deep Tech Lab,Armazém 5 - Palco 21,Fabrício Borges Carrerette; Rodolfo Acatauassú Nunes; Celso Mario Costa Lara; Marco Antõnio Guimarães Corrêa Filho; Luís Cristóvão de Moraes Sobrino Pôrto,"A mesa discutirá debater os desafios no tratamento oncológico de idosos, considerando predisposição genética e terapias inovadoras."
+    12/08,18:00 - 18:45,Estratégias que transformam eventos em experiências de marca com engajamento real,Arca Hub,Armazém 5 - Arca Hub,Nathalia Rocha,"Este painel trará a apresentação da pesquisa “Na raiz do Brasil” feita pela organização sem fins lucrativos Morada Comum que pesquisou as crenças e valores que fundamentam as lentes pelas quais diferentes segmentos da sociedade brasileira enxergam a crise climática, o valor da natureza e as soluções para um modelo econômico em equilíbrio com o planeta."
+    12/08,18:00 - 18:45,Music Business Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Thais Farage; Alexandre Martinez; Julia Busch; Michel Alcoforado,"Este painel propõe um reflexão sobre a jornada de compra da mulher no digital, com foco no comportamento e nas motivações femininas diante das marcas de luxo contemporâneo."
+    12/08,18:30 - 19:15,Transformação Digital e Dados Abertos: Como o Rio de Janeiro Está Construindo o Governo do Futuro,RIW Talks,Kobra 1º Piso - Palco 27,Rodrigo Costa Vasconcelos,"Como bancos estão se transformando em plataformas que conectam ecossistemas diversos — varejo, tecnologia, serviços e governo — para gerar relevância e experiências integradas."
+    12/08,18:30 - 19:00,Cultura de Inovação: Construindo Times Fortes Desde o Início,Open Innovation B,Armazém 5 - Palco 19,Laila Zaid; Francisco Figueiredo; Artur Miranda Sampaio; Wesley Teixeira; Tainá de Paula,O Brasil vai sediar a COP 30 — mas quais vozes vão estar no centro desse debate.
+    12/08,18:45 - 19:00,A IA transformando a Educação: o presente e um novo futuro,Inteligência Artificial,Kobra 1º Piso - Palco 26,,"As sessões de pitch são espaços estratégicos dedicados à apresentação concisa e impactante de ideias, produtos ou soluções inovadoras, com o objetivo de conquistar a atenção e o interesse de avaliadores, investidores e parceiros."
+    12/08,18:45 - 19:45,Encerramento,Deep Tech Lab,Armazém 5 - Palco 21,,Encontro de networking incentivado.
+    12/08,19:00 - 19:45,"Inovação que Conecta: O Papel da tecnologia na construção de um mundo acessível, incluso e neurodiverso.",Open Innovation,Armazém 5 - Palco 19,Marcus Moraes; João Walter; Bruno Pagliaricci,"Micro data centers, borda e colocation inteligente  Refrigeração líquida e modularidade  Interligação entre redes 5G e infra legada  Adoção de IA para previsão de falhas e otimização energética  Desafios de capacitação técnica no Brasil e a ABDC."
+    12/08,19:00 - 19:45,Hackeando o networking com eventos,Arca Hub,Armazém 5 - Arca Hub,Amanda Vasconcelos; Roberta Becker; Fábio Amorim,"Nesta palestra, você vai descobrir como empresas do setor estão transformando dados e audiência em novas fontes de receita, otimizando estratégias de marketing, personalizando ofertas e criando ecossistemas próprios de mídia."
+    12/08,19:00 - 19:45,Fashion Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Jonathan dos Santos Benitez,Vendas e Liderança na Era da Inteligência Emocional e da IA: como transformar pessoas e resultados ao mesmo tempo.
+    12/08,19:15 - 20:00,"A Tomada de Decisão Estratégica: Quando, Como e Por Que Implementar IA",Inteligência Artificial,Kobra 1º Piso - Palco 26,Dani Junco,"Enquanto o mundo corre para escalar, a B2Mamy faz um movimento contrário: desacelera para escutar, co-criar e experimentar junto."
+    12/08,19:15 - 20:00,Marketing para Startups e Novos Negócios,Open Innovation B,Armazém 5 - Palco 19,Eduardo Brizida; Alexis Aguirre; Juliana Zaniboni de Assunção; Roberto Musser,Cibersegurança em Infraestruturas Críticas: Riscos e proteção no ambiente digital das empresas de energia.
+    12/08,19:30 - 20:00,Viralizou: quando a ciência vira trend,RIW Talks,Kobra 1º Piso - Palco 27,Duda Portella; Beatriz Reis; Joca Guanaes,O novo luxo pela ótica da  construção da autoridade afetiva e espontanea.
+    13/08,10:30 - 11:15,Like e Laços : Desafios e Limites na Infâncias Digital,RIW Talks,Kobra 1º Piso - Palco 27,Orlando Ribeiro; Felipe Ribeiro,Quais são as tendências em EnergyTech que estão moldando o futuro da energia no mundo.
+    13/08,10:30 - 11:15,Agentes de IA e Novas Tecnologias para o Seu Negócio,Inteligência Artificial,Kobra 1º Piso - Palco 26,Clovis Barreira e Castro; Segen F. Estefen; Simone Pennafirme; Rodrigo Cebrian,O futuro do planeta também passa pelo fundo do mar.
+    13/08,10:30 - 11:00,Quando Golias Precisa de Davi -Como Startups e Corporações estão redefinindo Corporate Venturing,Open Innovation,Armazém 5 - Palco 19,Clara Pacce Pinto Serva; Andre Senador,-.
+    13/08,10:30 - 11:15,A experiência IA - EDU na Fundação Cecierj: uso prático e ético da Inteligência Artificial na educação pública,RIW Future,Kobra 1º Piso - Palco 29,Talles Sanavria; Marcelo Verly de Lemos; Alvaro Santos Antunes; Roberto Musser,"O impacto da Inteligência Artificial na educação vai muito além de ferramentas e plataformas: estamos diante de uma mudança profunda no papel do professor, na forma de aprender e no conceito de escola."
+    13/08,10:30 - 11:30,inovAÇÃO UFRJ,Arca Hub,Armazém 5 - Arca Hub,Amanda Graciano; Daniela  Graicar; Monique Lima,"Três mulheres com trajetórias complementares compartilham os bastidores de construir negócios inovadores no Brasil: os acertos, os perrengues, os momentos de virada."
+    13/08,10:30 - 10:45,Conectividade com Cyberseguraça para areas operacionais do setor elétrico,RIW Revolution,Kobra 2º Piso - Palco 40,João Neuenschwander Escosteguy Carneiro; Flávio Almada de França; Filipe Carloto; Mariana Bressan; Nataly Milena Parga,Alavancando a Inovação com Startups (Cases Startups Energy Hub).
+    13/08,11:00 - 11:15,Impulsionando a cultura digital com foco nas pessoas,Open Innovation B,Armazém 5 - Palco 19,Yumo Apurinã; Julian Pistone,"Julian Pistone, prestigiado palestrante internacional, compartilha sobre a arte e a ciência de se ter coragem para criar impacto em nosso mundo caótico."
+    13/08,11:00 - 11:45,"Meetup DevOps, Cloud & Infraestrutura",Arca Hub - MeetUp,Armazém 5 - Arca Hub,Oddik; 9F Sharks; Imperial Esports; Red Canids Kalunga,O Circuito FERJEE de Esports - CFE é o maior campeonato brasileiro de Counter-Strike no ano de 2025.
+    13/08,11:00 - 11:30,A Infraestrutura Invisível: Cibersegurança e Conectividade em Projetos de Energia e Mobilidade,RIW Revolution,Kobra 2º Piso - Palco 40,Artur Tilieri,-.
+    13/08,11:15 - 11:45,Modelos de Negócio Circulares: Como grandes empresas estão monetizando resíduos e subprodutos,Open Innovation,Armazém 5 - Palco 19,Ana Mayworm; Luiz Antonio Secco Secco,Essa palestra aborda o poder dos eventos como ferramenta estratégica para alavancar resultados no varejo.
+    13/08,11:30 - 12:15,"Sintonia Real – Arte, Natureza e Cultura no Tempo dos Algoritmos",Inteligência Artificial,Kobra 1º Piso - Palco 26,,"Secretaria de Estado de Ciência, Tecnologia e Inovação -RJ Secretaria de Estado de Saúde - RJ (SES) Fundação de Amparo à Pesquisa (FAPERJ) Universidade do Estado do Rio de Janeiro Pró-Reitoria de Saúde - (UERJ) Hospital Universitário Pedro Ernesto (HUPE) Academia Nacional de Medicina (ANM)."
+    13/08,11:30 - 12:00,Performance com Precisão: O Futuro do Esporte É Digital,RIW Future,Kobra 1º Piso - Palco 29,Ju Ferraz; Thaynara OG; Nathalia Garcia; Rita Batista; Marciele Albuquerque,Regionalidade / Brasilidade.
+    13/08,11:30 - 12:00,"Inovação que Mapeia o Futuro: Dados, Território e Decisão Estratégica",Open Innovation B,Armazém 5 - Palco 19,Claudio Garcia,"Baseado na análise das práticas de Corporate Venturing adotadas pelas 500 maiores empresas da lista Forbes Global 2000, ""Quando Golias Precisa de Davi"" investiga como startups e grandes corporações estão desenvolvendo novos modelos de relação para atender seus objetivos."
+    13/08,11:45 - 12:15,"Eletropostos em Empreendimentos: O que dizem os Bombeiros, o CREA e as novas exigências legais",RIW Revolution,Kobra 2º Piso - Palco 40,,Como dados e ferramentas podem ser aliados para identificação da sustentabilidade e combate ao greenwashing.
+    13/08,12:00 - 12:30,Empreendedorismo real: decodificando - e desmitificando - inovações nos pagamentos.,Open Innovation,Armazém 5 - Palco 19,,A digitalização das áreas operacionais do setor elétrico exige conectividade segura.
+    13/08,12:00 - 12:45,O que é DevOps e por onde começar,Arca Hub,Armazém 5 - Arca Hub,Marcelo Furtado; Lívia Pagotto; Felipe Villela; Marina Cançado,"O painel apresentará diferentes iniciativas que estão sendo empreendidas com o objetivo de dar visibilidade para soluções transformadoras, como: o Guia de Soluções de Clima e Natureza que sistematizou soluções que o Brasil lidera em alguns setores da economia, elaborado por Instituto Arapyaú e Instituto Itaúsa; e, o The Earthshot Prize idealizado pelo Príncipe William cuja premiação de 2025 acontecerá no Rio de Janeiro em novembro de 2025."
+    13/08,12:00 - 12:45,Meetup de Ciência de Dados,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Bruno Caldas Aranha; Elisa Salomão Lage; Gilberta Lucchesi,Financiabilidade da Transição Energética.
+    13/08,12:15 - 13:15,Como construir a narrativa certa para atrair investimento?,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Ricardo Weitsman; Henrique Del Lama; Bernardo Pontes,"Como a criatividade transforma a maneira de ativar marcas, engajar torcedores e reinventar experiências."
+    13/08,12:15 - 13:00,Educação e ciência para todos: quebrando barreiras com tecnologia e inovação nos projetos da Fundação Cecierj,RIW Future,Kobra 1º Piso - Palco 29,,Como proteger a camada digital que sustenta os sistemas energéticos.
+    13/08,12:15 - 12:45,Um Mundial de Criatividade: Case Snoop Dogg no Mundial de Clubes,Open Innovation B,Armazém 5 - Palco 19,Juliana Noronha; Renate Fuchs; Mariana Castro,"Neste encontro, vamos desvendar como a inovação e a transformação digital estão redesenhando o varejo em ritmo acelerado."
+    13/08,12:30 - 13:15,"Deepfake: Criatividade, Riscos e Regulação na Nova Era Digital",Inteligência Artificial,Kobra 1º Piso - Palco 26,,Conheça os melhores cases das startups participantes do Open Startups Challenge @RIW.
+    13/08,12:30 - 13:00,Da Tomada à Transformação: Como os Hubs de Eletropostos Estão Redesenhando o Espaço Urbano,RIW Revolution,Kobra 2º Piso - Palco 40,Andrea Rego Monteiro; Marcos Sant`Anna Lacerda; Bruno Sasson,Conectando Cidades: Construindo o Futuro Através da Cooperação Regional.
+    13/08,13:00 - 13:45,"Liderança Negra Feminina: Transformando o Corporativo com Criatividade, Inclusão e Eficiência",Open Innovation,Armazém 5 - Palco 19,Margareth Pretti Dalcolmo; Gulnar Azevedo e Silva,A mesa discutirá diretrizes e inovações nas políticas voltadas à promoção de direitos e cuidados com a população idosa.
+    13/08,13:00 - 13:45,Onde Eu Errei e O Que Fiz Com Isso,Open Innovation B,Armazém 5 - Palco 19,Marcos Felipe Duarte Pernambuco; Naiara Cristina Francisco Pereira; Vagner da Silva Rodrigues,"Alunos do Programa Dupla Escola apresentam uma solução desenvolvida para a empresa Plastpack Embalagens, com foco na automação da etapa de picotagem na linha de produção."
+    13/08,13:00 - 13:45,Entendendo AI de forma prática,Arca Hub,Armazém 5 - Arca Hub,Gustavo Victorica,Ninguém começa o dia pensando: “vou criar um dos maiores apps financeiros do Brasil”.
+    13/08,13:00 - 13:45,Deep Tech e P&D Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Marcelo Queiroz; Rafael Tonassi; André Uchoa; Guilherme Guimarães,"Neste painel, especialistas em finanças, comportamento do consumidor e entretenimento esportivo discutem como o conhecimento financeiro pode ser aliado na hora de apostar."
+    13/08,13:15 - 14:00,Entre algoritmos e autoria: A revolução da IA no campo dos direitos autorais,RIW Future,Kobra 1º Piso - Palco 29,,Encontro de networking para profissionais e entusiastas de Ciência de Dados.
+    13/08,13:15 - 13:45,"Energia para Crescer - Como o Rio de Janeiro Pode Garantir Energia, Estabilidade e Sustentabilidade para as Indústrias do Amanhã",RIW Revolution,Kobra 2º Piso - Palco 40,Breno Castro; Helena Zuntini; Mickaela Midon da Paixão,"Em foco, o Programa JPS - Jovens profissionais do saneamento da ABES."
+    13/08,13:30 - 14:15,O Brasil tem uma estratégia de Inteligência Artificial?,RIW Talks,Kobra 1º Piso - Palco 27,Erika Abreu de Souza Paixão; Maria Bussade Gomes de Freitas; Silvia Braz; Isabela Bussade,A força feminina pelas irmãs Bussade.
+    13/08,13:30 - 13:45,IA para você: como desenhar cursos de IA feitos para sua necessidade,Inteligência Artificial,Kobra 1º Piso - Palco 26,Priscila de Souza Costa; Carolina de Assis; Bruno José Ferreira de Souza Peixoto; Bruna Werneck; Luciana Tavares Perdigão,-.
+    13/08,14:00 - 15:00,"Narrativas Espaciais: design, tecnologia e experiência em projetos imersivos",Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Raquel Cardoso; Adriana Mansueto; Flávia Dutra Venâncio; Adriana Schneider,O que estamos fazendo para transformar os ambientes de trabalho.
+    13/08,14:00 - 14:45,Da IA aos agentes autônomos: como impulsionar os negócios e a cultura em uma startup de 216 anos,Inteligência Artificial,Kobra 1º Piso - Palco 26,Umberto Papera Filho,---.
+    13/08,14:00 - 14:45,Inovação Aberta Sem Censura: O Que a IA Realmente Entrega (ou não),Open Innovation,Armazém 5 - Palco 19,Debora Heller,Saliva: a nova era da performance esportiva.
+    13/08,14:00 - 14:45,"Inovação que Gera Valor: Estratégias Reais, Resultados Concretos",Open Innovation B,Armazém 5 - Palco 19,Helen Pedroso; Cinnara Leal; Aline Soares; Ingrid Reis,"Este painel explora o impacto das mulheres pretas em posições de liderança, destacando como elas estão redefinindo ambientes corporativos."
+    13/08,14:00 - 14:45,Como captar investimento anjo,Arca Hub,Armazém 5 - Arca Hub,José Belino; Daniel Salvatore Fernandes; Larissa Jarillo de Lima,Como empresas estão se transformando internamente para que seus produtos atendam os requisitos do novo consumidor.
+    13/08,14:00 - 14:45,Startups & Investidores,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Giselle Pinto de Faria Lopes; 1T (T) Tailah Bernardo de Almeida,"Este tema destaca as oportunidades da Inovação Azul no desenvolvimento de superalimentos marinhos, ressaltando seu potencial nutricional e sustentável."
+    13/08,14:00 - 14:30,"Deu Carga, Deu PIX: Como o WhatsApp Está Virando a Nova Maquininha dos Eletropostos",RIW Revolution,Kobra 2º Piso - Palco 40,,Encontro de networking para profissionais e entusiastas de Deep Tech e P&D.
+    13/08,14:30 - 15:00,Barreiras invisíveis: Como a nanotecnologia pode proteger o mundo conectado,RIW Future,Kobra 1º Piso - Palco 29,,Conversa sobre posicionamentos e reposicionamentos de marcas e de carreiras de personalidades.
+    13/08,14:45 - 15:15,"Energia com Responsabilidade: Desenvolvimento, Sustentabilidade e Segurança Técnica para o Rio do Futuro",RIW Revolution,Kobra 2º Piso - Palco 40,Leonardo Cyrino; Rodrigo Santoro; Marina Cançado,"Este painel discutirá como a inovação tecnológica, sob a ótica do investimento e da acessibilidade, tem promovido transformações sociais significativas."
+    13/08,15:00 - 15:45,Transformação Digital na América Latina: Desafios e Oportunidades com IA – O impacto da IA no crescimento econômico da região e como empresas podem se preparar para a nova era digital.,Inteligência Artificial,Kobra 1º Piso - Palco 26,Anderson Vitorino; Flávio Loução,"Este painel reunirá grandes empresas e startups para compartilhar experiências sobre como a inteligência artificial e a automação estão sendo aplicadas de forma estratégica para melhorar a eficiência operacional, a experiência do cliente e a tomada de decisão."
+    13/08,15:00 - 15:45,O Profissional do Futuro: Como Redesenhar sua Matriz de Competências em um Mundo Movido por IA?,Open Innovation,Armazém 5 - Palco 19,,Como a sustentabilidade deixa de ser custo e vira vantagem competitiva.
+    13/08,15:00 - 15:45,TrenDs News Talks @ Rio Innovation Week -  “O Futuro Não Espera: Um Encontro de Inquietos e Inovadores”,Open Innovation B,Armazém 5 - Palco 19,,Encontro de networking para startups e investidores.
+    13/08,15:00 - 15:45,"Vibe Pitch – Apresente sua ideia, startup ou negócio de um jeito simples e sem pressão",Arca Hub,Armazém 5 - Arca Hub,Pedro Freitas,Pagamentos por PIX e cartão direto no celular: a revolução da experiência do usuário nos hubs de recarga e serviços conectados.
+    13/08,15:00 - 15:45,Profissionais de inovação,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Xan Ravelli; Jonathan Azevedo; Arana Guimarães; Mafoane Odara,"A saúde social — conceito que ganhou destaque internacional, inclusive no SXSW — ganha contornos próprios no Brasil, um país marcado por desigualdades profundas, ritmo acelerado de trabalho e cidades densamente povoadas, mas ainda vulneráveis ao isolamento e à solidão."
+    13/08,15:30 - 16:15,Transição Energética,RIW Future,Kobra 1º Piso - Palco 29,Vinícius Farah,
+    13/08,15:45 - 16:45,The Business of Influence: como marcas constroem relevância no novo jogo da atenção,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Andressa Borba; Fellipe Caravana,Apresentação das iniciativas da Leroy Merlin para reduzir pegada de carbono em toda cadeia de valor.
+    13/08,16:00 - 16:45,AI Art Bridging East and West at HKUST (Guangzhou),Inteligência Artificial,Kobra 1º Piso - Palco 26,Marcio Aguiar,Palestra com Márcio Aguiar (NVIDIA)  A América Latina vive um momento decisivo em sua jornada digital.
+    13/08,16:00 - 16:45,Hubs de Inovação na Prática - Cases de Sucesso,Open Innovation,Armazém 5 - Palco 19,Vitor Bernardo; Thuane Rodrigues Nascimento; Suellen Souza; Horrara Moreira; João Victor Baptista Freitas,As inovações mais transformadoras não nascem só dos laboratórios — elas brotam dos territórios.
+    13/08,16:00 - 16:45,Infraestrutura Financeira: Como a Integração de Sistemas Está Redesenhando o Mercado de Finanças e Seguros,Open Innovation B,Armazém 5 - Palco 19,,Encontro de networking para profissionais de inovação e entusiastas.
+    13/08,16:00 - 16:45,"Vibe Pitch – Apresente sua ideia, startup ou negócio de um jeito simples e sem pressão",Arca Hub,Armazém 5 - Arca Hub,Ricardo Lima de Almeida Neves; Caroline Peixoto dos Santos; Aída Regina Monteiro de Assunção; Paulo Roberto Chaves Pavão,"O objetivo da mesa será apresentar as perdas sensoriais e seus impactos sociais e emocionais, propondo ações para inclusão e bem-estar."
+    13/08,16:00 - 16:45,Profissionais de novos negócios e parcerias,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Debora Tenca; Juliana Ávila; Celio Ashcar Jr.,Os impactos concretos da Inteligência Artificial na concepção e execução de experiências ao vivo.
+    13/08,16:00 - 17:00,Apresentação do C-Level João Pedro Flecha de Lima,Open Startup Lounge,Armazém 5 - Palco 23,Denis Abreu de Souza,Proteção de dados dos pacientes.
+    13/08,16:15 - 16:45,Energia Inteligente em Ambientes Críticos: O Papel do Armazenamento (Storage) e da Resiliência Operacional,RIW Revolution,Kobra 2º Piso - Palco 40,Luiz Carlos Bertolino; Mariana Erthal Rocha; Aderval Severino Luna; André Luiz Hemerly Costa,-.
+    13/08,17:00 - 17:45,Rio de Sabores: A Gastronomia como Cartão-Postal,RIW Talks,Kobra 1º Piso - Palco 27,Márcio Costa Borges; João Victor Guedes dos Santos; Raquel Virgínia; Chiara Martini,Líderes da indústria se reunirão para explorar como a diversidade brasileira pode ser um diferencial estratégico para as marcas.
+    13/08,17:00 - 17:45,Infraestrutura Digital e Estratégias de Inovação: Desafios e Oportunidades para o Rio,Inteligência Artificial,Kobra 1º Piso - Palco 26,Júlio Cesar Rodrigues Leite,Os avanços na área de cirurgia bucal: a evolução das práticas médicas e impacto direto na experiência e segurança do paciente.
+    13/08,17:00 - 17:45,Inovação aberta em multinacionais: como fomentar o ecossistema?,Open Innovation,Armazém 5 - Palco 19,João  Luiz  Martins  Carabetta; Rafael Nunes Wanderley; Bernardo Ainbinder; Raquel Flexa,"O futuro das cidades passa pela forma como usamos dados e inteligência artificial para garantir mais transparência, eficiência e justiça social."
+    13/08,17:00 - 17:45,Agentes de AI para negócios com N8N,Arca Hub,Armazém 5 - Arca Hub,Teo Tavares,Unreal Engine se trata de uma poderosa ferramenta para interatividade realtime.
+    13/08,17:00 - 17:45,"Blockchain, Cripto & Web3 Meetup",Arca Hub - MeetUp,Armazém 5 - Arca Hub,Marcelo Aflalo,Análise da cadeia produtiva da madeira na construção civil sob perspectiva de sustentabilidade.
+    13/08,17:00 - 17:30,Autoconhecimento para alavancar sua melhor versão na era digital,RIW Revolution,Kobra 2º Piso - Palco 40,Hostilio Ribeiro Jr,"O impacto do armazenamento de energia em data centers, indústrias e frotas elétricas."
+    13/08,17:30 - 18:15,"IA e Agricultura 4.0: Soluções para quem Planta, Colhe e Alimenta o Brasil",RIW Future,Kobra 1º Piso - Palco 29,Camila Bruzzi; Karen Miura; Marcos Piangers,"Em um TED Show inspirador, Marcos Piangers — autor best-seller e referência em paternidade ativa e inovação humana — abre o palco trazendo provocações sobre os papéis de homens e mulheres na sociedade contemporânea."
+    13/08,17:45 - 18:15,Transformação com IA e Casos de Uso no Setor Elétrico,RIW Revolution,Kobra 2º Piso - Palco 40,Renato Cerqueira; Alessandro Lombardi; Bernardo Ainbinder,"A transformação digital impulsionada pela inteligência artificial exige não apenas talento e inovação, mas também uma infraestrutura robusta, resiliente e preparada para o futuro."
+    13/08,18:00 - 18:45,Comunicação Hiperlocal como Ferramenta de Impacto: Conectando Territorialidade e Políticas Públicas,Inteligência Artificial,Kobra 1º Piso - Palco 26,Fabio Eon; Renata Avilla; Andrea Cancela da Cruz,"A Década da Ciência Oceânica para o Desenvolvimento Sustentável das Nações Unidas (2021–2030), iniciativa-quadro da ONU coordenada globalmente pela UNESCO, convida todos os setores da sociedade a contribuírem para a construção de um oceano mais saudável, resiliente e sustentável."
+    13/08,18:00 - 18:45,Estratégias de Desenvolvimento e Inovação no Vale do Pinhão,Open Innovation,Armazém 5 - Palco 19,Isabella Barros; Thiago Pietschmann; Luiz Abel Amorim; Alessandra França,Como ampliar o acesso ao crédito de forma justa e escalável.
+    13/08,18:00 - 18:45,"Conectar para Inovar: Quando Utilities, Bancos e Startups Redesenham o Boleto",Open Innovation B,Armazém 5 - Palco 19,Aline Kubrak,"Em um mundo cada vez mais digital, a jornada de compra de um imóvel ainda é carregada de incertezas, intangibilidades e emoção."
+    13/08,18:00 - 18:45,"Domando a IA: Notebook LM, Engenharia de Contexto e o Futuro da Pesquisa com RAG",Arca Hub,Armazém 5 - Arca Hub,Nadir Silva; Marineia Lazzari Chiovatto; Tainã Antunes Valgas Dorea; Melyssa Maila de Lima,"Este painel essencial explorará como os princípios de Diversidade, Equidade e Inclusão podem ser ativamente incorporados ao planejamento e design urbano, utilizando a arquitetura e o urbanismo como ferramentas para uma transformação radical."
+    13/08,18:00 - 18:45,Meetup de Inteligência Artificial,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Gislaine Queiroz; Marcelo Freixo,Turismo e Inovação como Soft Power: O Papel do Embratur na Imagem Global do Brasil O Brasil está ampliando sua presença internacional por meio da inovação no turismo.
+    13/08,18:30 - 19:15,O papel dos esportes na natureza para uma economia azul,RIW Talks,Kobra 1º Piso - Palco 27,Luis Felipe Schneider; Larissa Maria Assad Cavalcante,Inovação e impacto social na odontologia: Como novos materiais e a impressão 3D estão transformando sorrisos.
+    13/08,18:30 - 19:15,Impacto Social do Nós do Crochê - Territórios Inovadores - Rocinha,RIW Future,Kobra 1º Piso - Palco 29,Déborah De Mari; Ivana Moreira; Gabrielle Moraes; Barbara Rivello Elmôr; Fabia Pires Barbosa,Transformação cultural e inovação: o que realmente move as mudanças nas empresas.
+    13/08,19:00 - 19:45,"Uma Ia Indígena. E Ai? Protocolo Comunitário de Ética, Dados e Inteligência Artificial dos Povos Indígenas",Inteligência Artificial,Kobra 1º Piso - Palco 26,Lauro Amorim; Leandro Guerra; Liliane de Freitas Pinheiro Gomes,"Como a tecnologia pode gerar impacto real nos territórios, engajar comunidades e transformar políticas públicas."
+    13/08,19:00 - 19:45,"Lideranças de Inovação: Conectando Forças e Investimentos para Transformar o Rio de Janeiro""",Open Innovation,Armazém 5 - Palco 19,,-.
+    13/08,19:00 - 19:30,Estratégia do Oceano Azul,Open Innovation B,Armazém 5 - Palco 19,Nicolás Jesús Ramirez Torres; Gislaine Queiroz; Bernardo Santoro P. Machado; Adriano Krzyuy,xxxx.
+    13/08,19:00 - 19:45,IAtização de empresas,Arca Hub,Armazém 5 - Arca Hub,Gustavo Robichez; Zhao Junfeng; Feng Junkai; Mariana Rodrigues França,Quais aprendizados e oportunidades nascem da colaboração internacional em inovação energética.
+    13/08,19:00 - 19:45,The Developers Conference Meetup,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Marcos Piangers,Livro - Papai é Pop.
+    13/08,19:30 - 20:00,Festa Ploc - 20 Anos do maior evento retrô da América Latina,RIW Talks,Kobra 1º Piso - Palco 27,Ginna Ilka; Daniel Lopes da Mata,Patrocinador.
+    14/08,10:30 - 11:30,"O Futuro é Prateado: Como a longevidade está redefinindo inovação, negócios e investimentos",Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Caroline Alves da Costa; Daniela Vignoli; Heloisa Cyrillo,-.
+    14/08,10:30 - 10:45,2030 - A vida com Quantum,Inteligência Artificial,Kobra 1º Piso - Palco 26,Emanuele Cassimiro; Cyrano Rizzo,"Como tecnologias como IoT, 5G, Big Data e nuvem estão transformando a mobilidade urbana."
+    14/08,10:30 - 10:45,Abertura Innovators Under 35 Brasil 2025,MIT Innovators Under 35,Kobra 2º Piso - Palco 37,Bruno Muehlbauer; Rodrigo Sabatini; Flávio Lopes; Mia Montenegro,"No Rio Innovation Week, o painel Universo Sustentável – Favela Lixo Zero vai mostrar como territórios populares podem se tornar novos polos de inovação, impacto social e oportunidades de negócios."
+    14/08,10:30 - 10:45,Soft Skills em beta: como prototipar o profissional do futuro,Open Innovation,Armazém 5 - Palco 19,Marcelo Verly de Lemos; Alexandre Vermeulen; Juliana Benicio; Yamara Alfradique de Melo,O Rio de Janeiro vive um momento estratégico de reconstrução e fortalecimento dos seus ecossistemas de inovação.
+    14/08,10:30 - 10:45,Abertura,DEV Conference by TDC,Armazém 5 - Palco 21,Fabricia de Souza Santos; Fernando Silva da Paixao; Tatiana Queiroz; Angela Borges Kimbangu,"Este painel discutirá como as ppolíticas públicas devem contemplar a diversidade racial, de gênero e sexualidade, garantindo direitos e acesso igualitário para todos."
+    14/08,10:30 - 11:00,Checkpoint,RIW Revolution,Kobra 2º Piso - Palco 40,João Batista Carvalho e Silva; Clodoaldo Silva; Anderson Lopes; Marcos Antônio de Jesus Santos,"O painel mostra como o paradesporto impulsiona autonomia, saúde e inclusão, transformando trajetórias individuais e culturas organizacionais."
+    14/08,11:00 - 11:45,"Vender com Alma e Algoritmo: Dados que Revelam Oportunidades, Pessoas que Fecham Negócios",Inovatech PD7,Armazém 3 - Palco 10,Gabriela Mundim; Telmo Ghiorzi; Karina Tardivo; Tatiana Brito,"Futuros Possíveis, norteadores para a mudança."
+    14/08,11:00 - 11:45,"The Future, Out Loud: A Brutally Honest Experience in the Age of AI",Inteligência Artificial,Kobra 1º Piso - Palco 26,Fabiana dos Santos Vilar; Eduardo Nascimento; Evelyn Chaves Silva; Alessandra Teixeira,"A promoção de uma sociedade mais justa, inclusiva e plural passa por princípios como cidadania, diversidade cultural e a valorização de identidades, tradições e histórias dos mais variados grupos sociais."
+    14/08,11:00 - 11:45,"Desafiando fronteiras: mobilidade, cibersegurança e o próximo salto tecnológico brasileiro | Innovators Under 35 - Tecnologia",MIT Innovators Under 35,Kobra 2º Piso - Palco 37,Carolina Martins Kamiyama,"A palestra traz à tona a importância estratégica da defesa agropecuária para garantir a segurança dos alimentos, proteger a saúde pública e impulsionar a competitividade do agronegócio fluminense."
+    14/08,11:00 - 11:45,Do jogo à realidade: Como a gamificação pode multiplicar a produtividade e engajamento nas empresas”,Open Innovation,Armazém 5 - Palco 19,Ernesto Theodoro de Morais Jr; Adilson Dias,"O painel ""Pessoas que Inspiram"" é uma oportunidade fundamental para destacar histórias reais de superação, resiliência e transformação pessoal que conectam profundamente com os valores essenciais da inovação e do empreendedorismo."
+    14/08,11:00 - 11:30,Responsabilidade Climática: O Futuro Ético da Inovação.,RIW Future,Kobra 1º Piso - Palco 29,Dercio José Carvalhêda Júnior,As implicações da automação e da inteligência artificial para o futuro do trabalho no setor público na Sociedade 5.
+    14/08,11:00 - 11:45,"Product Management na Era da IA: Entre Prompts, Métricas e Decisões Éticas",DEV Conference by TDC,Armazém 5 - Palco 21,Joana Figueira de Mello; Romulo Teixeira Braga Nunes; Renan Ferreirinha; Pedro Flexa Ribeiro,É inegável que estamos vivenciando uma revolução midiática que afeta a todos nós.
+    14/08,11:00 - 11:45,Algorithmic Imagination Lab - Imaginação Algorítmica & Futuros Plurais,Arca Hub,Armazém 5 - Arca Hub,,-.
+    14/08,11:00 - 11:45,Profissionais de Gestão & Governança (Networking),Arca Hub - MeetUp,Armazém 5 - Arca Hub,Daniel Amaral Franco,"As competências comportamentais viraram o novo unicórnio do mercado — todo mundo quer, poucos sabem como validar."
+    14/08,11:15 - 11:30,Wi-Fi 7 e a Nova Era da Conectividade com 6 GHz,RIW Revolution,Kobra 2º Piso - Palco 40,Marcela Marques Abla,Arquitetos na sociedade e representações em entidades.
+    14/08,11:30 - 12:15,"Futuro em foco: inovação, empreendedorismo e tendências",RIW Talks,Kobra 1º Piso - Palco 27,Karla Spotorno; Claudio Pracownik,-.
+    14/08,11:45 - 12:15,"A descarbonização para um futuro sustentável: Startups, tecnologias e créditos de carbono no centro da nova revolução sustentável.",RIW Future,Kobra 1º Piso - Palco 29,Victoria Hipólito; Charles Henrique Schweitzer,"Ao implementar sistemas de gamificação, as empresas buscam criar um ambiente onde o crescimento é coletivo."
+    14/08,12:00 - 12:45,Investir para Inovar: O Poder dos Patrocínios e Incentivos no Futuro da Inovação,Inovatech PD7,Armazém 3 - Palco 10,Armando Winter; Taila Lemos; Richard Zeiger,"Com vozes de investidores corporativos, executivos de inovação e empreendedores, vamos discutir modelos bem-sucedidos, erros recorrentes e o futuro do CVC e do CVB em um Brasil cada vez mais conectado à inovação aberta."
+    14/08,12:00 - 12:45,Quando a tecnologia encontra o cuidado humano |  Innovators Under 35 - Saúde,MIT Innovators Under 35,Kobra 2º Piso - Palco 37,Bruna Freire Ribeiro Hirszman; Yanê Amoras Lima; Melina Assis; Lygia Cristina Anthero Santiago,A crise climática não é mais uma previsão — é uma realidade.
+    14/08,12:00 - 12:15,Ecossistemas que Encantam: Conectando propósitos e potencializando valor,Open Innovation,Armazém 5 - Palco 19,,"Encontro de networking para empresas, profissionais e entusiastas de Gestão & Governança."
+    14/08,12:00 - 12:45,IA para desenvolvedores de software na globo,DEV Conference by TDC,Armazém 5 - Palco 21,Renata Filardi; Emanoella Castro; Deborah Leite; Erick Barbi,Diálogos sobre as estruturas que sustentam dinâmicas disfuncionais no processo de desenvolvimento humano e de cuidado.
+    14/08,12:00 - 12:45,Consultoria escalável: O método ECOS para sua consultoria de análise de dados,Arca Hub,Armazém 5 - Arca Hub,Iza Valadão,"Este painel explorará como o conceito de Open BIM (Building Information Modeling) é fundamental para impulsionar a colaboração, a eficiência e a inovação na construção da Sociedade 5."
+    14/08,12:00 - 12:45,Black Founders + Negros na Inovação (Networking),Arca Hub - MeetUp,Armazém 5 - Arca Hub,Fernando C. Hernandez; Carlos Agenor Onofre Cabral; Raphael Neves Moura; Carlos Martins; Lilian Melo Barreto,Uma discussão estratégica e plural sobre os caminhos para o desenvolvimento de polos de descarbonização no país.
+    14/08,12:30 - 13:15,Divulgação científica na Era das Redes Sociais,RIW Talks,Kobra 1º Piso - Palco 27,Ana Beatriz Figueiredo; Luciene Machado; Gabriel Fajardo,Quais são os caminhos para financiar a infraestrutura de mobilidade do futuro.
+    14/08,12:30 - 13:00,"Indústria em Transformação: Inovação Aberta, Sustentabilidade e Competitividade no Século XXI""",Open Innovation,Armazém 5 - Palco 19,Thiago Luiz Ribeiro,Este tema aborda como a gestão do conhecimento pode impulsionar a inovação nas organizações.
+    14/08,12:30 - 13:15,"Fomento com pauta de mulheres; A importância do fomento, uma pauta de mulheres",RIW Future,Kobra 1º Piso - Palco 29,Kamilly Farah Cardoso Martins; Luana Ferreira de Almeida; Fernando Basílio dos Santos; Danúbia da Cunha de Sá Caputo,A mesa abordará apontar estratégias preventivas e soluções tecnológicas para proteção de idosos no ambiente doméstico.
+    14/08,13:00 - 13:45,AGENTES DE IA: A Nova Era dos Negócios Inteligentes,Inovatech PD7,Armazém 3 - Palco 10,Jean Martinelli; Marcos Feitosa Araujo de Souza; Daiane Santiago,"Explorar como as conexões geram valor para os clientes e potencializam resultados, através do alcance das marcas, do conhecimento do cliente e da oferta de benefícios."
+    14/08,13:00 - 13:15,"Consumidor 5.0: IA, Cultura de Dados e Novos Padrões de Engajamento",Inteligência Artificial,Kobra 1º Piso - Palco 26,Cassiano Rusycki,THE CHOICES WE MAKE - Como Será o Nosso Futuro no Transporte Público Cada decisão molda a cidade em que viveremos amanhã.
+    14/08,13:00 - 13:30,Orquestração e Governança de Multi AI Agents para Negócios,DEV Conference by TDC,Armazém 5 - Palco 21,Carlos Eduardo Pellegrino Cerri; Daniela Godoy Martins Corrêa,A masterclass convida o público a explorar como as Nature-Based Solutions (NBS) podem ser aliadas estratégicas na construção de um futuro energético mais sustentável.
+    14/08,13:00 - 13:45,Encontro de Jovens Empreendedores,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Rodrigo Marochi; Marcello Borio; Taz de Alencar; Rafael Alves Teixeira Sampaio,"Neste painel, especialistas e empreendedores à frente de inovações com inteligência artificial discutirão como essa tecnologia pode transformar a atuação do terceiro setor no Brasil."
+    14/08,13:00 - 13:15,Energia Inteligente em Tempo Real: Soluções Cisco para Monitoramento Elétrico e Automação de Redes,RIW Revolution,Kobra 2º Piso - Palco 40,Juliane Castro Carneiro; Eduardo Miranda; Ana Paula Camillo; Carlos Henrique Barros da Costa; Amanda Costa Cezario Silveira,"Como líderes industriais estão reinventando processos, produtos e modelos de negócio por meio da inovação aberta, tecnologia e parcerias estratégicas."
+    14/08,13:15 - 13:45,Empreendedorismo Social: inovando para um futuro mais justo,Open Innovation,Armazém 5 - Palco 19,Fernanda Caraballo; Rodrigo Tortoriello; Cassiano Rusycki,"Como a digitalização dos meios de pagamento, a integração de sistemas e o uso de dados estão transformando a gestão da mobilidade urbana."
+    14/08,13:30 - 14:00,Aplicação da Inteligência Artificial Generativa em Estratégias Criativas de Marketing,Inteligência Artificial,Kobra 1º Piso - Palco 26,Letícia de Freitas e Castro; Bruno Dauaire; Felipe Peixoto; Tainá de Paula,"Como a tecnologia e a inovação podem impulsionar políticas públicas integradas entre Habitação e Meio Ambiente, promovendo cidades mais resilientes, sustentáveis e inclusivas."
+    14/08,13:30 - 14:15,Do Ticket ao Tech: construindo o futuro digital dos eventos,RIW Future,Kobra 1º Piso - Palco 29,Marcos Gurgel; Gustavo Castro; Tales Guarisa Gomes,A era do Consumidor 5.
+    14/08,13:30 - 13:45,Humanoides no Mercado: O Futuro das Relações com Máquinas Sociais,RIW Revolution,Kobra 2º Piso - Palco 40,Thelma Valverde,Moderador: inovabra Bradesco A modernização da arquitetura tecnológica é um desafio comum entre grandes organizações que buscam escalar inovação e responder rapidamente às mudanças do mercado.
+    14/08,13:45 - 14:15,Casos de Referência de GenAI com a AWS,DEV Conference by TDC,Armazém 5 - Palco 21,Arthur Santana; Guilherme Guimarães; Rafael Plastina; Diego Vieira,"Do VAR ao wearable tech, a tecnologia está em todos os aspectos do esporte."
+    14/08,14:00 - 15:00,The Business of Influence: como marcas constroem relevância no novo jogo da atenção,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Luiz Gustavo Bezerra; Alexandre Kosmalski; Farid Shecaira; Janaina Ruas Filiponi,Como transformar o potencial do armazenamento geológico de carbono em uma realidade concreta no Brasil.
+    14/08,14:00 - 14:45,"O Futuro da Hotelaria: Conectando Talentos, Tecnologia e Tendências",Inovatech PD7,Armazém 3 - Palco 10,Matheus  do Carmo; Priscila Nassar Galante Guedes; Marcela Castelli; Henrique Cartaxo,BRIFW.
+    14/08,14:00 - 14:45,ESG na Prática: Empresas que Estão Redesenhando o Impacto Ambiental e Social nos Negócios,Open Innovation,Armazém 5 - Palco 19,Gilvan Bueno,-.
+    14/08,14:00 - 14:45,Captação de investimento com Venture Capital,Arca Hub,Armazém 5 - Arca Hub,Denise Milfont; Clelio de Paula; André Weller; Glauber Vianna,Que surpresas nos aguardam no campo das Artes com a Tecnologia.
+    14/08,14:00 - 14:45,Digital Nomads Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Thiago Rudiger; Rodrigoh Henriques; Daniel Coquieri; Thomaz Teixeira,"Muito além das criptomoedas, o blockchain está criando novas infraestruturas para finanças, identidade e ativos digitais."
+    14/08,14:15 - 14:45,Direito à Realidade & Desigualdade Sintética,Inteligência Artificial,Kobra 1º Piso - Palco 26,Renan Mendonça; Luciara Queiroz; Alexandre Fonseca,"Em um cenário em que grandes corporações são desafiadas a rever seus impactos e assumir compromissos reais com a sociedade, este painel abre espaço para conversas diretas, sem filtros, sobre o que está sendo feito — e o que ainda precisa ser feito."
+    14/08,14:30 - 15:15,"O novo mapa da inteligência: dados, contexto e decisão em tempo real | Innovators Under 35 – Inteligência Artificial",MIT Innovators Under 35,Kobra 2º Piso - Palco 37,Luiza Serpa; Camilla Carvalho; Zeca Novais; Beatriz Waclawek,x.
+    14/08,14:30 - 15:00,Vibe coding: o ciclo se repete?,DEV Conference by TDC,Armazém 5 - Palco 21,Ismael Fernando Christmann,A inovação tem se mostrado uma aliada poderosa na construção de soluções sustentáveis e na preservação do meio ambiente.
+    14/08,14:45 - 15:45,"Wi-Fi 7 na Prática: Como a Nova Geração Vai Redefinir Velocidade, Capacidade e Experiência nos Negócios",RIW Revolution,Kobra 2º Piso - Palco 40,Steven Vachani,Aprenda a captar investimento com fundos de Venture Capital.
+    14/08,15:00 - 15:45,IA - Inteligência Autoral,RIW Talks,Kobra 1º Piso - Palco 27,,Digital Nomads.
+    14/08,15:00 - 15:45,IA FUTURE: Reescrevendo a Inovação com o Fator Humano,Inovatech PD7,Armazém 3 - Palco 10,Camerata de Violões Arealense,Apresentação cultural.
+    14/08,15:00 - 15:45,Tendências e Incertezas em Inteligência Artificial: Pra onde vamos?,Inteligência Artificial,Kobra 1º Piso - Palco 26,Eduardo Saron Nunes,"Na era da inteligência artificial generativa, a fronteira entre o real e o fabricado se torna cada vez mais tênue — e com ela surgem novas formas de exclusão."
+    14/08,15:00 - 15:45,Inteligência Criativa: Como IA e colaboração estão moldando o futuro das marcas,Open Innovation,Armazém 5 - Palco 19,Fatima Facuri,"Uma abordagem integrativa que conecta inteligência artificial, testes epigenéticos e tecnologias estéticas de ponta para elevar a performance dos tratamentos com máxima precisão e segurança."
+    14/08,15:00 - 15:45,Pitch para investidores,Arca Hub,Armazém 5 - Arca Hub,Paulo Silveira,"Nesta palestra, abordarei a evolução da programação, desde os primeiros dias de manipulação direta de bits e bytes até as atuais ferramentas de codificação assistida por IA, como o 'vibe coding'."
+    14/08,15:00 - 15:45,"Turistech, Turismo & Hotelaria Networking",Arca Hub - MeetUp,Armazém 5 - Arca Hub,Vitor Miranda de Almeida,"Com a importância das práticas de ESG, é vital que as empresas saibam como comunicar suas ações de forma eficaz."
+    14/08,15:15 - 15:45,IA e Além: as competências esperadas dos profissionais do futuro,DEV Conference by TDC,Armazém 5 - Palco 21,Ricardo Villaça; Renata Dourado; Maria Paula Fidalgo; Danielle Bibas,O que precisamos deixar para trás para crescer.
+    14/08,15:30 - 16:15,Criatividade aumentada: onde o digital expande o humano | Innovators Under 35 – Arte,MIT Innovators Under 35,Kobra 2º Piso - Palco 37,Juliana Neves,"Em um mundo cada vez mais digital, a loja física continua sendo essencial — mas precisa entregar muito mais que produtos."
+    14/08,15:45 - 16:45,Diversidade como Estratégia de Mercado,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Pamela Belém; Fernanda Delgado; Mariana Rodrigues França; Mette Tangen,"A transição energética deve ser, necessariamente, justa e inclusiva — e a equidade de gênero é parte central desse caminho."
+    14/08,16:00 - 16:45,"Construindo Empresas com Foco em IA: Estratégia, Cultura e Tecnologia",RIW Talks,Kobra 1º Piso - Palco 27,,"Encontro de networking para profissionais e entusiastas de Turistech, Turismo & Hotelaria."
+    14/08,16:00 - 16:45,"Mundo Real, Mentes Digitais: O Novo Empreendedorismo",Inovatech PD7,Armazém 3 - Palco 10,Marcelo Caldi e Quinteto Sanfônico,Apresentação cultural.
+    14/08,16:00 - 16:45,"""IA & Criatividade - Como IA está revolucionando o marketing e os processos criativos, e compartilhar dicas práticas e inspiradoras de como usar IA como parceira para expandir sua criatividade e viver ainda mais experiências humanas.   """,Inteligência Artificial,Kobra 1º Piso - Palco 26,Ivan Londres; Cristina Sayao; Felipe Tenório Vicente; Raphael Neves Moura,Desafios Regulatórios da Descentralização: O papel dos novos modelos tarifários.
+    14/08,16:00 - 16:45,Inovação e transformação digital: o uso da IA no segmento de seguros,Open Innovation,Armazém 5 - Palco 19,Juliana Silva Da Cruz Escorce; Edielen Matos; Karina Cox; Ana Flávia Cabral Souza Leite,"A partir de dados do setor e casos práticos, será apresentado como o uso  estratégico das leis de incentivo fiscal pode direcionar investimentos para projetos  sociais relevantes, potencializando resultados concretos para a sociedade."
+    14/08,16:00 - 16:45,Desconstruindo vieses na IA: o papel da diversidade e acessibilidade,DEV Conference by TDC,Armazém 5 - Palco 21,Maju de Araujo; Fred Pacheco,O painel traz relatos reais e reflexões sobre o impacto da violência mediada pelas telas na vida de famílias e jovens.
+    14/08,16:00 - 16:45,Pitch para investidores,Arca Hub,Armazém 5 - Arca Hub,Nathalia Homsy; Gabriel Bastos,Como as ferramentas de digitalização impulsionam e aceleram o planejamento estratégico de grandes empresas.
+    14/08,16:00 - 16:45,Fintechs Meetup,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Lucas Cunha; Ronan Daniel Cezar; Douglas Pombo; Fábio Amorim,"Nesta palestra, você vai entender como transformar a operação varejista em uma verdadeira plataforma de mídia, monetizando dados, espaços físicos e digitais, e criando novas fontes de receita com marcas parceiras."
+    14/08,16:00 - 16:45,Hotelaria Inteligente: O Robô de Delivery que Revoluciona a Experiência do Hóspede,RIW Revolution,Kobra 2º Piso - Palco 40,Josilaine de Oliveira de Souza; Thiago Ferreira Pinheiro Dias Pereira,A mesa tratará de investigar o potencial econômico e turístico da longevidade como vetor de desenvolvimento social e inclusão.
+    14/08,16:30 - 17:15,Shaping the Future: modelos de negócio para a próxima década | Innovators Under 35 – Negócios,MIT Innovators Under 35,Kobra 2º Piso - Palco 37,Marcio Iannacca,"Um projeto que mescla um esporte incrível, tecnologia e coragem."
+    14/08,17:00 - 17:45,Do Linear ao Matricial: A Revolução do Varejo na Era Digital,Inovatech PD7,Armazém 3 - Palco 10,Camerata de Violões Arealense,Apresentação cultural.
+    14/08,17:00 - 17:45,Inteligência Artificial na Pesquisa Científica: Automação e Inovação,Inteligência Artificial,Kobra 1º Piso - Palco 26,Celso Nisterenko,"Foco em redução de tempo de espera, conveniência, economia operacional e impacto na experiência do cliente."
+    14/08,17:00 - 17:45,Construindo um Gerador de Imagens no WhatsApp com OpenAI e Twilio,Arca Hub,Armazém 5 - Arca Hub,Chris Garman; Clayton Allen,Cenários para os Estados Unidos  com Trump 2.
+    14/08,17:00 - 17:45,Encontro de Corporate Venture Capital,Arca Hub - MeetUp,Armazém 5 - Arca Hub,,O painel “Rumo à COP 30: soluções que impulsionam futuro sustentável” apresenta iniciativas do Banco do Brasil em sustentabilidade.
+    14/08,17:00 - 17:45,"Infraestrutura Invisível, Impacto Visível: Como Redes Neutras Estão Conectando o Futuro Inteligente do Brasil",RIW Revolution,Kobra 2º Piso - Palco 40,Oddik; 9F Sharks; Imperial Esports; Red Canids Kalunga,O Circuito FERJEE de Esports - CFE é o maior campeonato brasileiro de Counter-Strike no ano de 2025.
+    14/08,17:30 - 18:30,"A Arte da Comunicação Estratégica: como influenciar, vender e liderar com autenticidade",Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Ricardo Limongi; Celso Camilo; Ben Hur Correia; Renato Cerqueira; Paula Chimenti,"A inteligência artificial está se tornando uma aliada estratégica da ciência, transformando profundamente métodos de pesquisa, análise de dados e geração de conhecimento."
+    14/08,17:30 - 18:15,ESG como motor de transformação real | Innovators Under 35 – ESG,MIT Innovators Under 35,Kobra 2º Piso - Palco 37,Daniel Monteiro; Luiz Barroso; Carlos Andreazza,A palestra aborda o papel das telecomunicações e da conectividade como motores da transformação no setor de energia.
+    14/08,18:00 - 18:45,O Poder da IA: A Nova Era da Igualdade de Oportunidades,Inovatech PD7,Armazém 3 - Palco 10,Ricardo Marinho Soares Braz; Raquel Pereira Flores; Tamiris Cristhina Resende,
+    14/08,18:00 - 18:45,"O Futuro do Open Industry, Data Spaces e a IA: Nova Indústria Brasil e Tecnologias",Inteligência Artificial,Kobra 1º Piso - Palco 26,Matheus Zeuch; Luan Dal Bó; Lucas Tadeo Monteiro,
+    14/08,18:00 - 18:45,Negócios Tecnológicos e Inovadores: Oportunidades e Desafios para Empreendedores,Open Innovation,Armazém 5 - Palco 19,Manoela Peres; Renata Sphaier de Freitas,
+    14/08,18:00 - 18:30,Por Trás dos Bastidores: Fluxos de Dados em Reality Shows da Globo,DEV Conference by TDC,Armazém 5 - Palco 21,Marcos André,"Num mundo em rápida transformação, a verdadeira inovação começa com quem somos, não apenas com o que fazemos."
+    14/08,18:00 - 18:45,Corporate Venture Capital na Prática: Resultados e Qualidade nos Investimentos Corporativos,Arca Hub,Armazém 5 - Arca Hub,Tania Oliveira; Tibério Caio Boff Zortéa; Renan Martino; Humberto Luiz da Silva Junior,"Transformar não é apenas implementar novas tecnologias, mas repensar culturas, processos e estruturas que resistem ao tempo."
+    14/08,18:00 - 18:45,Energy Business Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Alessandro Moreira,"Você já imaginou encontrar um computador no lixo e, anos depois, estar palestrando sobre inteligência artificial."
+    14/08,18:30 - 19:15,Desvendando o Futuro Financeiro: O Papel da Tecnologia e da Educação na Democratização do Dinheiro Global,RIW Talks,Kobra 1º Piso - Palco 27,Mario Keller; Mário Henrique Guimarães Bittencourt; Fabricio Braga,"A interseção entre esporte, saúde e tecnologia está transformando o desempenho de atletas e a forma como prevenimos e tratamos lesões."
+    14/08,18:45 - 19:15,Visão computacional no monitoramento com drones: desafios e soluções,DEV Conference by TDC,Armazém 5 - Palco 21,Julia Hellen Franco Ferreira,"No universo dos reality shows, os dados são gerados constantemente e têm um grande impacto nas decisões de produção, recomendação e na experiência do público."
+    14/08,19:00 - 19:30,Liderança em tempos de profundas mudanças e novas tecnologias: o caminho da inovação e do sucesso nas organizações,Inovatech PD7,Armazém 3 - Palco 10,Marcela Marques Abla; Nabil Georges Bonduki,A Arquitetura do Habitat Social.
+    14/08,19:00 - 19:45,Library’s practices in promoting AI adoption in Computational Media Arts and Design at HKUST(GZ),Inteligência Artificial,Kobra 1º Piso - Palco 26,Armando Winter,"Descubra como as grandes empresas estão utilizando o Corporate Venture Capital (CVC) para impulsionar inovação, gerar resultados concretos e selecionar projetos de alta qualidade."
+    14/08,19:00 - 19:45,Mulheres Líderes: Pioneiras na Transformação dos Negócios e da Inovação,Open Innovation,Armazém 5 - Palco 19,Ricardo Vieiralves de Castro; José Henrique Withers Aquino; José Augusto da Silva Messias; Ronaldo Damião; Reinaldo Guimarães; Gulnar Azevedo e Silva,"A mesa tem como objetivo celebrar os 75 anos da Universidade do Estado do Rio de Janeiro, destacando sua trajetória de compromisso com a ciência, a democracia e a inclusão social."
+    14/08,19:00 - 19:45,"Sustentabilidade, ESG & Impacto - Networking",Arca Hub - MeetUp,Armazém 5 - Arca Hub,Camerata de Violões Arealense,Apresentação cultural.
+    14/08,19:30 - 20:00,"Palestra com idealizador do Ouchhh Studio - Pioneiro em pinturas e esculturas de dados, além de inteligência de máquina (IA) aplicada à arte pública",RIW Talks,Kobra 1º Piso - Palco 27,Foster Zhang,"With the widespread applications of large language models, artificial intelligence technology is driving the transformation of libraries into knowledge hubs."
+    15/08,10:30 - 11:15,The 3%: Lideranças que redefinem as regras,RIW Talks,Kobra 1º Piso - Palco 27,Carolina de Oliveira; Naiara dos Reis Correa; Ana Paula Braga,"Este painel celebra mulheres líderes que estão na vanguarda da inovação, transformando negócios e criando soluções disruptivas."
+    15/08,10:30 - 11:30,O Poder da Interculturalidade - Choque Cultural,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Reynaldo Eli,
+    15/08,10:30 - 10:45,7 passos para conseguir dinheiro público não reembolsável para sua startup!,Open Innovation,Armazém 5 - Palco 19,Marcelo Billi; Rodrigoh Henriques; Carlos André,ANBIMA recebe Fenasbac para discutir o papel estratégico da inovação na transformação do sistema financeiro.
+    15/08,10:30 - 11:15,O mar fluminense nos tempos de mudança climática: tecnologias para geração de políticas de adaptação e mitigação,RIW Future,Kobra 1º Piso - Palco 29,Sandra Torres Serra; Ana Raquel de Sousa Pourbaix Diniz; Helia Maria Oliveira da Costa Borges,"A proposta desta mesa é discutir tabus e experiências afetivas na terceira idade, promovendo o direito ao prazer, afeto e reconhecimento."
+    15/08,10:30 - 11:00,"Modelos de Linguagem, Agentes Autônomos e a Revolução da IA Generativa",DEV Conference by TDC,Armazém 5 - Palco 21,Daniel da Silva Marques; Bruno Feigelson,O Ecossistema de Lawtechs: Panorama e Tendências 2025.
+    15/08,10:30 - 11:00,SLMs (pequenos modelos de linguagem): Já ouviu falar? Venha entender por que a NVIDIA considera como o futuro dos Agentes de IA,RIW Revolution,Kobra 2º Piso - Palco 40,,-.
+    15/08,11:00 - 11:45,Inovação do uso de Áreas Comerciais e o novo papel do Shopping Center,Inovatech PD7,Armazém 3 - Palco 10,Marcilene Scantamburlo,"Todos os anos, o Governo libera bilhões, não reembolsáveis, para projetos de inovação."
+    15/08,11:00 - 11:45,"Benefícios do futuro: como tecnologia, cultura organizacional e diversidade impulsionam modelos mais flexíveis e alinhados à nova experiência do colaborador”",Open Innovation,Armazém 5 - Palco 19,Erley Bispo; José Roberto Marinho Bueno,Adaptação climática nos territórios e as soluções urgentes para águas urbanas e costeiras.
+    15/08,11:00 - 11:45,Linkedin + AI. A nova formula da prospeção,Arca Hub,Armazém 5 - Arca Hub,Thiago Castro Ferreira,Em breve.
+    15/08,11:00 - 11:45,Encontro de Profissionais de Direito,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Diogo Tavares Robaina; João Luiz de Figueiredo,"A economia criativa é um ecossistema em expansão, que articula cultura, arte e inovação em estratégias de impacto socioeconômico."
+    15/08,11:15 - 11:45,Busca 3.0: A Era dos Agentes que Questionam Antes de Consultar através de LLM + MCP + Elasticsearch,DEV Conference by TDC,Armazém 5 - Palco 21,Anamaria de Almeida Vicente; Gustavo Figueiredo Motta; Eduardo Carboni Tardelli,Uma excelente discussão sobre compliance no contexto das tecnologias.
+    15/08,11:15 - 11:30,Saúde 5.0: Como a inteligência artificial brasileira está revolucionando a prevenção do câncer no Brasil e influenciando o mundo,RIW Revolution,Kobra 2º Piso - Palco 40,Fernanda Bardi Franco; Juliana Noronha; Michelle Schineider,"A era da Inteligência Artificial chegou, exigindo uma reinvenção sem precedentes de profissionais e organizações."
+    15/08,11:30 - 12:15,O impacto positivo de liderança feminina em negócios,RIW Talks,Kobra 1º Piso - Palco 27,Bernardo Langoni; Enio Ribeiro; Olivia Richardson,"O Rio de Janeiro se consagra, ano após ano, como um dos grandes palcos do esporte global — e o tênis e a corrida de rua são dois exemplos emblemáticos disso."
+    15/08,11:30 - 12:15,Mulheres e Meninas na Ciência: Tecnologia e Inovação,RIW Future,Kobra 1º Piso - Palco 29,Claudio Ziglio; Pedro Vassalo Maia da Costa; Vitor Emanoel Siqueira Santos; Raphael Neves Moura,"Carbon Management, Inovação, Ciência e Tecnologia para o Net Zero."
+    15/08,12:00 - 12:45,O trabalho do CONFAP nos Estados,Inovatech PD7,Armazém 3 - Palco 10,Erika Abreu de Souza Paixão; Rachel Abreu,
+    15/08,12:00 - 12:15,O Amanhã Começa Aqui: Inovação Aberta desbloqueando Novos Caminhos Tecnológicos e Transformando o Futuro em um Mar de Oportunidades,Open Innovation,Armazém 5 - Palco 19,Giovanna Meneghel,"Como construir uma marca relevante em tempos de excesso de informação, na era do hype e do greenwashing."
+    15/08,12:00 - 12:30,RESERVADO XP - Novas Tecnologias,DEV Conference by TDC,Armazém 5 - Palco 21,Marie Ikemoto; Natalie Unterstell; Ana Toni; Karen Oliveira; Bernardo Strassburg,Da Rio92 a COP30: Soluções integradas na sinergia clima e natureza.
+    15/08,12:00 - 12:45,Compliance para startups,Arca Hub,Armazém 5 - Arca Hub,Anthony Eigier; Istvan Camargo; Abel Costa; Carolina Dassie,A inteligência artificial está abrindo novas fronteiras no cuidado com a saúde — desde a prevenção e o diagnóstico até o tratamento personalizado.
+    15/08,12:00 - 12:45,Profissionais de E-commerce & Marketplaces (Networking),Arca Hub - MeetUp,Armazém 5 - Arca Hub,Fernanda Rebelo; Sandra Gebara Boni Hidalgo; Lívia Carolina,Eficiência e Lideranças femininas no Jurídico.
+    15/08,12:15 - 13:15,The Business of Influence: como marcas constroem relevância no novo jogo da atenção,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,,
+    15/08,12:30 - 13:15,"Cidades em Movimento - Inovação, Mobilidade e Futuro",RIW Talks,Kobra 1º Piso - Palco 27,Camilo Geoffrey da Rocha,"Idealizado pelo jornalista e DJ Camilo Rocha,  ""Músicas que Contam Histórias"" é um híbrido de fala e discotecagem que atravessa música, histórias pessoais e os contextos sociais e culturais da aurora da música eletrônica no Brasil, fazendo conexões com a cena atual."
+    15/08,12:30 - 13:15,Lei do Bem e a Iso de Inovação,Open Innovation,Armazém 5 - Palco 19,William George Lopes Saab; Tiana Santos; Carlos Rocha; Liria Knutti,O dinamismo do ecossistema de inovação desperta muita fascinação e costuma ser cheio de oportunidades.
+    15/08,12:30 - 13:00,"Economia Fluminense 5.0: Fomento, Tecnologia e Decisão Baseada em Dados",RIW Future,Kobra 1º Piso - Palco 29,Diego Perez; Roseline Morais; Alessandra Bentes Saraiva; Dr. Antonio Marcos Fonte Guimarães; Claudio Pracownik; Dr. João Uzeda Accioly,"A regulação de criptoativos e contratos inteligentes ou, de forma mais abrangente, os ativos digitais continua sendo uma das pautas mais relevantes do cenário global."
+    15/08,13:00 - 13:45,Marco Legal das startups,Inovatech PD7,Armazém 3 - Palco 10,Sérgio Gusman; Luiz Antonio Elias; Anderson Moraes,-.
+    15/08,13:00 - 13:30,Inovação com Inteligência Artificial transformando processos na diretoria de Governança e Conformidade da Petrobras,DEV Conference by TDC,Armazém 5 - Palco 21,Oddik; 9F Sharks; Imperial Esports; Red Canids Kalunga,O Circuito FERJEE de Esports - CFE é o maior campeonato brasileiro de Counter-Strike no ano de 2025.
+    15/08,13:00 - 13:45,Lean Governance para startups,Arca Hub,Armazém 5 - Arca Hub,Michelle Beatrice; Luis Fernando Gomes Pereira; Sydnei Menezes; Maurício Dutra; Marli Peçanha,"Painel que nasce da vivência do programa CAU/RJ Favela, desenvolvido pelo Conselho de Arquitetura e Urbanismo do Rio de Janeiro, e se desdobra numa proposta de reflexão global sobre os caminhos para uma sociedade mais humana, sensível e inclusiva."
+    15/08,13:00 - 13:45,Govtech Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Bruno Balla; Pedro Daniel; Fabiana Bentes; Luiz Carlos Siciliano,"Este painel discute os avanços, desafios e caminhos para uma governança moderna nas federações, clubes e entidades esportivas brasileiras — com foco em compliance, accountability, financiamento e participação social."
+    15/08,13:00 - 13:30,Moda Inteligente: Como a IA Generativa Está Transformando o Varejo de Moda,RIW Revolution,Kobra 2º Piso - Palco 40,Luiz Mandarino; Bianca Peres Pinto; Paulo Pietrobon; Felipe Burman,Novas Fronteiras do Carbon Tech.
+    15/08,13:15 - 13:45,Palestra edital ''Mães Cientistas'',RIW Future,Kobra 1º Piso - Palco 29,Fernando Augusto Garcia Martins,"Descubra como a Diretoria de Governança e Conformidade está revolucionando a análise de documentos não estruturados de texto, áudio e vídeo com Inteligência Artificial."
+    15/08,13:30 - 13:45,Inovação na industria Naval e Offshore,Open Innovation,Armazém 5 - Palco 19,Helena Carla,-.
+    15/08,13:45 - 14:30,Desafios da cybersegurança no Mundo Pós Quântico: visão de diferentes industrias,DEV Conference by TDC,Armazém 5 - Palco 21,Lucia Casasanta; John Alexander Harold Auton; Marcelo Zenker,"O quê pode levar empresas, inclusive algumas publicamente reconhecidas por aparentemente adotarem boas práticas de governança, a estarem envolvidas em fraudes e episódios de conflitos de interesse."
+    15/08,13:45 - 14:15,O Poder da China: o essencial que deveríamos saber sobre inovação,RIW Revolution,Kobra 2º Piso - Palco 40,Rodrigo da Luz; Nickolas Werckmeister,Como será se deslocar pelas cidades nos próximos anos.
+    15/08,14:00 - 15:00,A IA para Gestão Humanizada de Pessoas e Negócios,Masterclasses,Armazém 1 A - Masterclasses - Palco 02,Ariel Quirino; Murilo Rosa; Eduardo Chaves,"O painel tem como objetivo mostrar a importância da construção de marcas, o processo de branding, tanto para personalidades quanto para empresas e país, pela chamada marca-país."
+    15/08,14:00 - 14:45,Humanização da tecnologia,Inovatech PD7,Armazém 3 - Palco 10,Camilla Albani; Gabriela Ruddy; Karolina Gutiez,A energia que move o mundo está mudando de forma.
+    15/08,14:00 - 14:45,BAT Brasil: construindo um amanhã melhor com inovação e transformação digital,Open Innovation,Armazém 5 - Palco 19,Leonardo Filardi,
+    15/08,14:00 - 14:45,Parcerias que Transformam: O Impacto do Setor Privado na Formação Profissional,RIW Future,Kobra 1º Piso - Palco 29,Rodolfo Picinin,Ser piloto de drone agrícola já é uma das profissões mais atuais no agro.
+    15/08,14:00 - 14:45,Como captar investimento para startups,Arca Hub,Armazém 5 - Arca Hub,Alex Fonseca; Guilherme Guimarães; Ana Paula Castello Branco; Felipe Fraga; Arthur Silva,As casas de apostas se tornaram grandes players no mercado esportivo.
+    15/08,14:00 - 14:45,"Jornalismo, Mídia & Comunicação Networking",Arca Hub - MeetUp,Armazém 5 - Arca Hub,Franco Lamping; Cecílio Cosac Fraguas; Veronica Tanquette; Gabriela Santi,"Este painel discutirá como a IA está transformando o setor financeiro e de seguros, desde a análise de crédito até a personalização de serviços e a automação de processos."
+    15/08,14:30 - 15:30,"Fronteiras Invisíveis: Como Áudio, Vídeo e IA Estão Moldando Espaços que Sentem, Pensam e Encantam",RIW Revolution,Kobra 2º Piso - Palco 40,Anny Meisler; Samara Checon; Malu Borges; Bruna Olivo,"O que define o luxo em um país diverso, criativo e em transformação como o Brasil."
+    15/08,14:45 - 15:15,Tecnologias Quânticas e o Futuro das Cidades Inteligentes: Impactos Sociais e Sustentáveis,DEV Conference by TDC,Armazém 5 - Palco 21,Ariel Quirino; André Sturm,"O painel é uma conversa sobre como as relações bilaterais entre países podem fortalecer mutuamente as suas próprias culturas e, consequentemente, o poder suave (soft power) de cada um."
+    15/08,15:00 - 15:45,Transformação Digital e o Futuro dos Negócios,Open Innovation,Armazém 5 - Palco 19,Flavia Maia; Marcelo Gleiser,Lucro e propósito não são mais opostos.
+    15/08,15:00 - 15:30,Inteligência Artificial para Todos: Desmistificando a IA,RIW Future,Kobra 1º Piso - Palco 29,Bernardo Tinoco; Raphael Saraiva; Marcio Lerner; Bruno Messias Pires de Freitas,"A indústria farmacêutica está passando por uma transformação profunda impulsionada pelo uso estratégico de dados, novas tecnologias e modelos colaborativos de inovação."
+    15/08,15:00 - 15:45,Pitch para investidores (final),Arca Hub,Armazém 5 - Arca Hub,Claudio Vicente Di Gioia; Maria Emília Peres; Carol Nomura; Cassiano Farani,Como Private Equity e Venture Capital estão Remodelando o Cenário Energético Através do Financiamento de Infraestrutura e Inovação em Energia Limpa.
+    15/08,15:00 - 15:45,Encontro de Recursos Humanos,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Luciana Deretti,A felicidade como uma escolha inegociável.
+    15/08,15:30 - 16:15,"Tecnologias Quânticas no Brasil: Pesquisa, Desenvolvimento e Protagonismo",DEV Conference by TDC,Armazém 5 - Palco 21,Joana Fleury; Simone Sancho; Fernando Torquatto; Vivi Siqueira,"Neste painel, vamos discutir como a economia da beleza é construída na prática, revelando as diferentes forças que impulsionam o setor — da multinacional que investe em formação profissional e inclusão, aos pequenos negócios que atendem a um consumidor cada vez mais interessado em soluções feitas sob medida para seus gostos pessoais."
+    15/08,15:45 - 16:30,A Realidade da Inteligência Artificial e o Futuro com a Computação Quântica – Onde Estamos e Onde Queremos Chegar?,RIW Future,Kobra 1º Piso - Palco 29,Marília Câmara; Billy Nascimento,"Globo Gente apresenta: No universo contemporâneo da comunicação, a atenção do consumidor se tornou mais valiosa do que nunca."
+    15/08,15:45 - 16:00,MediaTech: Como a Globo seguirá contando histórias independente do meio,RIW Revolution,Kobra 2º Piso - Palco 40,Geraldo Marcos Nogueira Pinto; Cláudia Simões; Claudia Araujo; Bianca Pacheco,"O painel propõe um novo olhar sobre o envelhecimento da pessoa com deficiência, abordando de forma integrada temas como cuidados multidisciplinares centrados na pessoa, respeito à autonomia e às singularidades, uso de tecnologias assistivas, construção de cidades inclusivas e políticas públicas articuladas com a sociedade civil."
+    15/08,16:00 - 16:45,"O futuro do trabalho: Como a flexibilidade, talento e automação estão moldando a nova era do ambiente corporativo",Open Innovation,Armazém 5 - Palco 19,Ailton Krenak; Marcelo Gleiser,O que une o pensamento ancestral indígena e a física moderna.
+    15/08,16:00 - 16:45,Pitch para investidores (final),Arca Hub,Armazém 5 - Arca Hub,Aluren; Laura Vieira Scofield; Abigail de Souza Rodrigues; Robert Franz Janssen,Aceleradoras e incubadoras desempenham um papel fundamental no amadurecimento de startups e na preparação para futuras rodadas de investimento.
+    15/08,16:00 - 16:45,Healthtech Networking,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Daniel Laterza Rodrigues,Biometano na rota da descarbonização logística.
+    15/08,16:15 - 16:45,Oracle Innovation Center: a força do Ecossistema impulsinada por AI,RIW Revolution,Kobra 2º Piso - Palco 40,Favela Orquestra IBME,Apresentação cultural.
+    15/08,16:30 - 17:15,Cultura para acelerar a inovação,Inovatech PD7,Armazém 3 - Palco 10,Jeremy Casebeer; Duda Tedesco; Natalia Guitler; Manoela Caiado,"Quando o esporte encontra a natureza, nasce uma relação de admiração, dependência e responsabilidade."
+    15/08,16:30 - 16:45,Criando sua IA Opensource com Deepseek e Protegendo seus dados.,DEV Conference by TDC,Armazém 5 - Palco 21,Tarsilinha; Edu Santos,"Neste painel, passado e futuro se encontram para mostrar como a força da cultura e da identidade brasileira pode se transformar em valor de marca, desejo e negócios, especialmente no mercado de luxo, que cada vez mais busca autenticidade e propósito."
+    15/08,16:45 - 17:30,Inteligência Artificial: Desafios e Oportunidades na Educação e no Mundo do Trabalho (Mesa-redonda),RIW Future,Kobra 1º Piso - Palco 29,Rafael Zago,"Já imaginou ter sua própria IA, rápida, privada e totalmente sob seu controle."
+    15/08,17:00 - 17:45,Inovação Regenerativa — Soluções Sustentáveis para um Rio Mais Inteligente e Resiliente,Open Innovation,Armazém 5 - Palco 19,Andre Santos; Silvia Isabel,"Junte-se a nós e descubra como a Petrobras está redefinindo o futuro da auditoria com o AUDLABS, nosso laboratório de inovação dedicado à experimentação e implementação de soluções digitais de ponta."
+    15/08,17:00 - 17:45,Encontro da Economia Prateada & Seniortech,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Ailton Krenak,-.
+    15/08,17:15 - 17:45,"CX, IA e o Empreendedorismo da Nova Era: O Fim do CX Tradicional",DEV Conference by TDC,Armazém 5 - Palco 21,Debora Thome Costa; Heloisa Aguiar; Analine Castro; Fernanda Curdi; Daniele Guimarães da Silva; Maria Carolina Medeiros,"O painel propõe uma reflexão potente sobre os caminhos, desafios e conquistas das mulheres que ocupam posições de liderança e decisão no setor público, na política, na economia e na sociedade civil."
+    15/08,17:30 - 18:15,Liderança em um Mundo em Transformação: Tendências e práticas para criar times de Alta Performance,Inovatech PD7,Armazém 3 - Palco 10,André Luis Azevedo Guedes; Paulo Barcellos; Alexandre Cardeman; Felipe Peixoto,"Estratégias, desafios e inovações na implementação do desenvolvimento sustentável e inteligente em nível municipal."
+    15/08,17:45 - 18:15,Spots: tendências de comportamento para o amanhã,RIW Revolution,Kobra 2º Piso - Palco 40,Bruno Batista,"Apresentação de políticas públicas, tecnologias e inovações que promovem a inclusão na mobilidade urbana, garantindo deslocamentos acessíveis, seguros e equitativos."
+    15/08,18:00 - 18:45,"Mentes que Movem o Novo Mundo: Liderança, Comportamento e Inovação na Era das Conexões",Open Innovation,Armazém 5 - Palco 19,Oddik; 9F Sharks; Imperial Esports; Red Canids Kalunga,O Circuito FERJEE de Esports - CFE é o maior campeonato brasileiro de Counter-Strike no ano de 2025.
+    15/08,18:00 - 18:30,A Era da IA: Inovação Científica e Empreendedorismo Ágil para Impacto,DEV Conference by TDC,Armazém 5 - Palco 21,Eduardo Gianetti,Livro - Imortalidades.
+    15/08,18:00 - 19:00,Happy Hour,Arca Hub,Armazém 5 - Arca Hub,Camila Leal Lima; Sergio Luis Schmidt,"A ideia central é explorar como inovações já disponíveis na medicina — como mapeamentos de atividades cerebrais — podem ser utilizadas em contextos jurídicos, especialmente durante interrogatórios em ações trabalhistas."
+    15/08,18:00 - 19:00,Happy Hour do Arca Hub,Arca Hub - MeetUp,Armazém 5 - Arca Hub,Rodrigo Terron; Matheus Farias,"Nesta Sessão com Rodrigo Terron ( NewHack) e Matheus Farias (Harvard PHD), vamos explorar como a Inteligência Artificial está transformando não apenas o empreendedorismo, mas também a própria base tecnológica que o viabiliza."
+    15/08,18:30 - 19:15,O Papel das Lawtechs e Legaltechs na Inclusão e Acesso à Justiça,RIW Talks,Kobra 1º Piso - Palco 27,Ana Laura Rebello; Alexandre Zaramela; elias Temponi; Kely Gois,"Este painel discute como a verticalização urbana se alinha à mobilidade do futuro, explorando o potencial dos eVTOLs (veículos elétricos de decolagem e pouso vertical) para promover um avanço sustentável no transporte e no planejamento das cidades."
+    15/08,18:30 - 19:15,A nova influência: como vender no B2B através de comunidades e narrativas,Inovatech PD7,Armazém 3 - Palco 10,Talita Uzeda; Claudio Lemos; Rodrigo Santini; Fernanda Freire,O Rio de Janeiro é uma das poucas cidades do mundo onde a exuberância da natureza se entrelaça com a vida urbana de forma tão marcante.
+    15/08,18:30 - 18:45,IA moldando o futuro da saúde,RIW Revolution,Kobra 2º Piso - Palco 40,Malvino Ramos Salvador; Kyra Gracie,"Muito além do tatame, Kyra Gracie e Malvino Salvador mostram como o jiu-jitsu, aliado à conscientização e à influência nas redes sociais, pode salvar vidas."
+    15/08,18:45 - 19:00,Encerramento,DEV Conference by TDC,Armazém 5 - Palco 21,André Vieira Braz,"História da beleza (influência cronológica, geográfica e cultural) e o que mudou com as mídias sociais."
+    15/08,19:00 - 19:30,Sua empresa quer IA? Comece pelos dados.,Open Innovation,Armazém 5 - Palco 19,Marcio Unrue Ramos; Paulo Roberto Rebello Filho; Salvio Pontes Moreira Rocha; Arthur Farme D Amoed Neto,"O setor de saúde passa por uma transformação acelerada, impulsionada por avanços tecnológicos, mudanças no perfil dos pacientes e pela necessidade urgente de modelos financeiros mais sustentáveis."
+    15/08,19:00 - 19:15,Painel: A academia como alavanca para as novas Deeptechs,RIW Revolution,Kobra 2º Piso - Palco 40,Eu Convidado; Ferrugem,19:00 - Eu Convidado | 21:00 - Ferrugem.
+    15/08,19:30 - 19:45,"Design, tecnologia e inovação revolucionando os PDVs",RIW Revolution,Kobra 2º Piso - Palco 40,Antonio Tarcisio Elia Querasian,personalização de PDV com tecnologia.
+
+</script>
+
+    <script>
+        function el(t, c, txt) { const e = document.createElement(t); if (c) e.className = c; if (txt !== undefined) e.textContent = txt; return e; }
+        function uniq(a) { return Array.from(new Set(a.filter(Boolean))) }
+        function norm(s) { return (s || '').toLowerCase() }
+        function pastelFor(key) {
+            const s = String(key || ''); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+            const hue = (h + 20) % 360; return { border: `hsl(${hue} 70% 60% / .9)`, bg: `hsl(${hue} 60% 16% / .35)` };
+        }
+        function parseCSV(txt) {
+            txt = txt.replace(/^\uFEFF/, ''); const rows = []; let cur = ['']; let inQ = false;
+            for (let i = 0; i < txt.length; i++) {
+                const c = txt[i], n = txt[i + 1];
+                if (c === '\"' && inQ && n === '\"') { cur[cur.length - 1] += '\"'; i++; continue }
+                if (c === '\"') { inQ = !inQ; continue }
+                if (c === ',' && !inQ) { cur.push(''); continue }
+                if ((c === '\n' || c === '\r') && !inQ) { rows.push(cur.map(s => s.trim())); cur = ['']; if (c === '\r' && n === '\n') i++; continue }
+                cur[cur.length - 1] += c
+            }
+            if (cur.some(v => v !== '')) rows.push(cur.map(s => s.trim()));
+            return rows.filter(r => r.some(v => v && v.length));
+        }
+        function toObjects(rows) {
+            const h = rows[0].map(x => x.trim()); const out = [];
+            for (let i = 1; i < rows.length; i++) {
+                const r = rows[i]; if (!r) continue; const o = {}; h.forEach((k, j) => o[k] = r[j] || '');
+                o.Data = o.Data || o.data || ''; o['Horário'] = o['Horário'] || o.Horario || ''; o['Título'] = o['Título'] || o.Titulo || '';
+                o.Palco = o.Palco || ''; o.Local = o.Local || ''; o.Palestrantes = o.Palestrantes || ''; o['Descrição'] = o['Descrição'] || o.Descricao || '';
+                out.push(o);
+            } return out;
+        }
+
+        (function () {
+            const raw = document.getElementById('csv').textContent;
+            const rows = parseCSV(raw); if (!rows.length) { document.getElementById('agenda').textContent = 'CSV vazio.'; return; }
+            const items = toObjects(rows).filter(o => o['Título'] || o['Descrição']);
+
+            // filtros por Palco
+            const filtersEl = document.getElementById('filters'); const selected = new Set();
+            const palcos = uniq(items.map(o => o.Palco)).sort();
+            function toggle(p) {
+                if (selected.has(p)) selected.delete(p); else selected.add(p);
+                Array.from(filtersEl.children).forEach(ch => ch.classList.toggle('active', selected.has(ch.dataset.tag)));
+                apply();
+            }
+            palcos.forEach(p => { if (!p) return; const b = el('button', 'chip-btn', p); b.dataset.tag = p; b.onclick = () => toggle(p); filtersEl.appendChild(b); });
+
+            // render por dia (lista)
+            const days = uniq(items.map(o => o.Data));
+            const agenda = document.getElementById('agenda'); const cards = [];
+            days.forEach(d => {
+                const sec = el('section', 'day'); sec.appendChild(el('h2', null, d || 'Sem data'));
+                const list = el('div', 'list');
+                items.filter(o => o.Data === d).forEach(o => {
+                    const colors = pastelFor(o.Palco);
+                    const it = el('article', 'item'); it.style.borderLeftColor = colors.border; it.style.background = colors.bg;
+                    it.dataset.search = norm([o['Título'], o.Palestrantes, o.Palco, o.Local, o['Descrição']].join(' '));
+                    it.dataset.palco = o.Palco || '';
+                    const time = el('div', 'time', o['Horário'] || '—');
+                    const body = el('div');
+                    const title = el('h3', 'title', o['Título'] || '(sem título)');
+                    const meta = el('div', 'meta');
+                    if (o.Palco) meta.appendChild(el('span', 'chip', o.Palco));
+                    if (o.Local) meta.appendChild(el('span', 'chip', o.Local));
+                    if (o.Palestrantes) meta.appendChild(el('span', 'chip', o.Palestrantes));
+                    body.appendChild(title); if (meta.childNodes.length) body.appendChild(meta);
+                    if (o['Descrição']) body.appendChild(el('div', 'desc', o['Descrição']));
+                    it.append(time, body); list.appendChild(it); cards.push(it);
+                });
+                sec.appendChild(list); agenda.appendChild(sec);
+            });
+
+            const q = document.getElementById('q');
+            function apply() {
+                const term = norm(q.value);
+                cards.forEach(c => {
+                    const tOk = !term || c.dataset.search.includes(term);
+                    const pOk = selected.size === 0 || selected.has(c.dataset.palco);
+                    c.classList.toggle('hidden', !(tOk && pOk));
+                });
+            }
+            q.addEventListener('input', apply);
+        })();
+    </script>
+</body>
+
+</html>
