@@ -183,18 +183,6 @@
         .hidden {
             display: none !important
         }
-
-        .sticky-toolbar {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: linear-gradient(180deg, rgba(13, 19, 34, .88), rgba(11, 14, 21, .88));
-            backdrop-filter: blur(6px);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 10px 12px;
-            margin-bottom: 16px;
-        }
     </style>
 </head>
 
@@ -203,9 +191,6 @@
         <header>
             <h1>Rio Innovation Week 2025 — Programação</h1>
             <p class="note">Lista clean, cores suaves por Palco, com busca e filtros.</p>
-        </header>
-
-        <div class="sticky-toolbar">
             <div class="toolbar">
                 <div class="search">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -216,10 +201,12 @@
                 </div>
                 <div class="filters" id="filters"></div>
             </div>
-        </div>
+        </header>
+        <main id="agenda"></main>
+    </div>
 
-        <!-- Cole aqui TODO o CSV (incluindo a primeira linha de cabeçalho) -->
-        <script id="csv" type="text/csv">Data,Horário,Título,Palco,Local,Palestrantes,Descrição
+    <!-- Cole aqui TODO o CSV (incluindo a primeira linha de cabeçalho) -->
+    <script id="csv" type="text/csv">Data,Horário,Título,Palco,Local,Palestrantes,Descrição
     12/08,11:00 - 11:15,Recomunique-se: porque uma comunicação commodity não vende nada pra ninguém,RIW Talks,Kobra 1º Piso - Palco 27,Carlos Gil; Sebastian Vettel,"O tetracampeão mundial de Fórmula 1, Sebastian Vettel, estará no Rio Innovation Week para um bate-papo exclusivo que vai muito além das pistas."
     12/08,11:00 - 11:45,Rio do Amanhã - Capital Brasileira da Inteligência Artificial,Inteligência Artificial,Kobra 1º Piso - Palco 26,Camila Farani; Felipe Titto,"No painel “Da Influência ao Equity: a estratégia por trás do ecossistema de Felipe Titto”, os holofotes estarão voltados para as engrenagens que movem um dos empreendedores mais multifacetados da nova geração."
     12/08,11:00 - 11:45,Governança Digital e Dados Abertos,Cities Of Tomorrow,Kobra 2º Piso - Palco 39,Pedro Sobral,"Tráfego não é sobre botão, é sobre base."
@@ -538,89 +525,89 @@
 
 </script>
 
-        <script>
-            function el(t, c, txt) { const e = document.createElement(t); if (c) e.className = c; if (txt !== undefined) e.textContent = txt; return e; }
-            function uniq(a) { return Array.from(new Set(a.filter(Boolean))) }
-            function norm(s) { return (s || '').toLowerCase() }
-            function pastelFor(key) {
-                const s = String(key || ''); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
-                const hue = (h + 20) % 360; return { border: `hsl(${hue} 70% 60% / .9)`, bg: `hsl(${hue} 60% 16% / .35)` };
+    <script>
+        function el(t, c, txt) { const e = document.createElement(t); if (c) e.className = c; if (txt !== undefined) e.textContent = txt; return e; }
+        function uniq(a) { return Array.from(new Set(a.filter(Boolean))) }
+        function norm(s) { return (s || '').toLowerCase() }
+        function pastelFor(key) {
+            const s = String(key || ''); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+            const hue = (h + 20) % 360; return { border: `hsl(${hue} 70% 60% / .9)`, bg: `hsl(${hue} 60% 16% / .35)` };
+        }
+        function parseCSV(txt) {
+            txt = txt.replace(/^\uFEFF/, ''); const rows = []; let cur = ['']; let inQ = false;
+            for (let i = 0; i < txt.length; i++) {
+                const c = txt[i], n = txt[i + 1];
+                if (c === '\"' && inQ && n === '\"') { cur[cur.length - 1] += '\"'; i++; continue }
+                if (c === '\"') { inQ = !inQ; continue }
+                if (c === ',' && !inQ) { cur.push(''); continue }
+                if ((c === '\n' || c === '\r') && !inQ) { rows.push(cur.map(s => s.trim())); cur = ['']; if (c === '\r' && n === '\n') i++; continue }
+                cur[cur.length - 1] += c
             }
-            function parseCSV(txt) {
-                txt = txt.replace(/^\uFEFF/, ''); const rows = []; let cur = ['']; let inQ = false;
-                for (let i = 0; i < txt.length; i++) {
-                    const c = txt[i], n = txt[i + 1];
-                    if (c === '\"' && inQ && n === '\"') { cur[cur.length - 1] += '\"'; i++; continue }
-                    if (c === '\"') { inQ = !inQ; continue }
-                    if (c === ',' && !inQ) { cur.push(''); continue }
-                    if ((c === '\n' || c === '\r') && !inQ) { rows.push(cur.map(s => s.trim())); cur = ['']; if (c === '\r' && n === '\n') i++; continue }
-                    cur[cur.length - 1] += c
-                }
-                if (cur.some(v => v !== '')) rows.push(cur.map(s => s.trim()));
-                return rows.filter(r => r.some(v => v && v.length));
+            if (cur.some(v => v !== '')) rows.push(cur.map(s => s.trim()));
+            return rows.filter(r => r.some(v => v && v.length));
+        }
+        function toObjects(rows) {
+            const h = rows[0].map(x => x.trim()); const out = [];
+            for (let i = 1; i < rows.length; i++) {
+                const r = rows[i]; if (!r) continue; const o = {}; h.forEach((k, j) => o[k] = r[j] || '');
+                o.Data = o.Data || o.data || ''; o['Horário'] = o['Horário'] || o.Horario || ''; o['Título'] = o['Título'] || o.Titulo || '';
+                o.Palco = o.Palco || ''; o.Local = o.Local || ''; o.Palestrantes = o.Palestrantes || ''; o['Descrição'] = o['Descrição'] || o.Descricao || '';
+                out.push(o);
+            } return out;
+        }
+
+        (function () {
+            const raw = document.getElementById('csv').textContent;
+            const rows = parseCSV(raw); if (!rows.length) { document.getElementById('agenda').textContent = 'CSV vazio.'; return; }
+            const items = toObjects(rows).filter(o => o['Título'] || o['Descrição']);
+
+            // filtros por Palco
+            const filtersEl = document.getElementById('filters'); const selected = new Set();
+            const palcos = uniq(items.map(o => o.Palco)).sort();
+            function toggle(p) {
+                if (selected.has(p)) selected.delete(p); else selected.add(p);
+                Array.from(filtersEl.children).forEach(ch => ch.classList.toggle('active', selected.has(ch.dataset.tag)));
+                apply();
             }
-            function toObjects(rows) {
-                const h = rows[0].map(x => x.trim()); const out = [];
-                for (let i = 1; i < rows.length; i++) {
-                    const r = rows[i]; if (!r) continue; const o = {}; h.forEach((k, j) => o[k] = r[j] || '');
-                    o.Data = o.Data || o.data || ''; o['Horário'] = o['Horário'] || o.Horario || ''; o['Título'] = o['Título'] || o.Titulo || '';
-                    o.Palco = o.Palco || ''; o.Local = o.Local || ''; o.Palestrantes = o.Palestrantes || ''; o['Descrição'] = o['Descrição'] || o.Descricao || '';
-                    out.push(o);
-                } return out;
-            }
+            palcos.forEach(p => { if (!p) return; const b = el('button', 'chip-btn', p); b.dataset.tag = p; b.onclick = () => toggle(p); filtersEl.appendChild(b); });
 
-            (function () {
-                const raw = document.getElementById('csv').textContent;
-                const rows = parseCSV(raw); if (!rows.length) { document.getElementById('agenda').textContent = 'CSV vazio.'; return; }
-                const items = toObjects(rows).filter(o => o['Título'] || o['Descrição']);
-
-                // filtros por Palco
-                const filtersEl = document.getElementById('filters'); const selected = new Set();
-                const palcos = uniq(items.map(o => o.Palco)).sort();
-                function toggle(p) {
-                    if (selected.has(p)) selected.delete(p); else selected.add(p);
-                    Array.from(filtersEl.children).forEach(ch => ch.classList.toggle('active', selected.has(ch.dataset.tag)));
-                    apply();
-                }
-                palcos.forEach(p => { if (!p) return; const b = el('button', 'chip-btn', p); b.dataset.tag = p; b.onclick = () => toggle(p); filtersEl.appendChild(b); });
-
-                // render por dia (lista)
-                const days = uniq(items.map(o => o.Data));
-                const agenda = document.getElementById('agenda'); const cards = [];
-                days.forEach(d => {
-                    const sec = el('section', 'day'); sec.appendChild(el('h2', null, d || 'Sem data'));
-                    const list = el('div', 'list');
-                    items.filter(o => o.Data === d).forEach(o => {
-                        const colors = pastelFor(o.Palco);
-                        const it = el('article', 'item'); it.style.borderLeftColor = colors.border; it.style.background = colors.bg;
-                        it.dataset.search = norm([o['Título'], o.Palestrantes, o.Palco, o.Local, o['Descrição']].join(' '));
-                        it.dataset.palco = o.Palco || '';
-                        const time = el('div', 'time', o['Horário'] || '—');
-                        const body = el('div');
-                        const title = el('h3', 'title', o['Título'] || '(sem título)');
-                        const meta = el('div', 'meta');
-                        if (o.Palco) meta.appendChild(el('span', 'chip', o.Palco));
-                        if (o.Local) meta.appendChild(el('span', 'chip', o.Local));
-                        if (o.Palestrantes) meta.appendChild(el('span', 'chip', o.Palestrantes));
-                        body.appendChild(title); if (meta.childNodes.length) body.appendChild(meta);
-                        if (o['Descrição']) body.appendChild(el('div', 'desc', o['Descrição']));
-                        it.append(time, body); list.appendChild(it); cards.push(it);
-                    });
-                    sec.appendChild(list); agenda.appendChild(sec);
+            // render por dia (lista)
+            const days = uniq(items.map(o => o.Data));
+            const agenda = document.getElementById('agenda'); const cards = [];
+            days.forEach(d => {
+                const sec = el('section', 'day'); sec.appendChild(el('h2', null, d || 'Sem data'));
+                const list = el('div', 'list');
+                items.filter(o => o.Data === d).forEach(o => {
+                    const colors = pastelFor(o.Palco);
+                    const it = el('article', 'item'); it.style.borderLeftColor = colors.border; it.style.background = colors.bg;
+                    it.dataset.search = norm([o['Título'], o.Palestrantes, o.Palco, o.Local, o['Descrição']].join(' '));
+                    it.dataset.palco = o.Palco || '';
+                    const time = el('div', 'time', o['Horário'] || '—');
+                    const body = el('div');
+                    const title = el('h3', 'title', o['Título'] || '(sem título)');
+                    const meta = el('div', 'meta');
+                    if (o.Palco) meta.appendChild(el('span', 'chip', o.Palco));
+                    if (o.Local) meta.appendChild(el('span', 'chip', o.Local));
+                    if (o.Palestrantes) meta.appendChild(el('span', 'chip', o.Palestrantes));
+                    body.appendChild(title); if (meta.childNodes.length) body.appendChild(meta);
+                    if (o['Descrição']) body.appendChild(el('div', 'desc', o['Descrição']));
+                    it.append(time, body); list.appendChild(it); cards.push(it);
                 });
+                sec.appendChild(list); agenda.appendChild(sec);
+            });
 
-                const q = document.getElementById('q');
-                function apply() {
-                    const term = norm(q.value);
-                    cards.forEach(c => {
-                        const tOk = !term || c.dataset.search.includes(term);
-                        const pOk = selected.size === 0 || selected.has(c.dataset.palco);
-                        c.classList.toggle('hidden', !(tOk && pOk));
-                    });
-                }
-                q.addEventListener('input', apply);
-            })();
-        </script>
+            const q = document.getElementById('q');
+            function apply() {
+                const term = norm(q.value);
+                cards.forEach(c => {
+                    const tOk = !term || c.dataset.search.includes(term);
+                    const pOk = selected.size === 0 || selected.has(c.dataset.palco);
+                    c.classList.toggle('hidden', !(tOk && pOk));
+                });
+            }
+            q.addEventListener('input', apply);
+        })();
+    </script>
 </body>
 
 </html>
